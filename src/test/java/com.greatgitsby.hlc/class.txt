@@ -1,0 +1,25 @@
+set state = START
+
+repeat
+    read a char
+
+    if table[state][char] != NULL
+        start = table[state][char]
+        lexeme += char
+    else
+        if state is "accepting" ----> if we're in the ID state, need some special code here
+            push back the char
+            return a Token for lexeme
+        else
+            error
+
+if in sym table
+    return that
+else
+    add new entry in sym table ("foobar", type=ID)
+    return it
+
+state table (DFA)
+    state x char
+
+if we hit ID, and it gets to accepting state, Hansen doesn't go to the state table. he checks the symbol table

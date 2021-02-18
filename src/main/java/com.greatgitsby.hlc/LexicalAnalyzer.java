@@ -19,11 +19,8 @@ public class LexicalAnalyzer {
 
     private static final char DIGIT = '0';
     private static final char LETTER = 'a';
-
-    /**
-     * Idea:
-     *  current state -> input character -> { next state, accepting?, back-up? }
-     */
+    private static final char END_COMMENT = '}';
+    private static final char END_STRING_CONST = '"';
 
     public LexicalAnalyzer() {
         _lexemes = new ArrayDeque<>();
@@ -213,14 +210,16 @@ public class LexicalAnalyzer {
                 lexemeValue.append(Character.toString(theChar));
                 charNumber++;
 
-                if (normalizedChar == '}') {
+                if (normalizedChar == END_COMMENT) {
                     currentState = State.COMMENT;
                 }
             } else if (currentState == State.IN_STRING) {
                 lexemeValue.append(Character.toString(theChar));
                 charNumber++;
 
-                if (normalizedChar == '"') {
+                // If we have hit the END_STRING_CONST character,
+                // it is time to move to the STRING_CONST state
+                if (normalizedChar == END_STRING_CONST) {
                     currentState = State.STRING_CONST;
                 }
             } else if (currentState.isAccepting()) {
@@ -229,24 +228,27 @@ public class LexicalAnalyzer {
                 // Get the current value of the lexeme
                 lexeme = lexemeValue.toString();
 
-                // determine what identifier
+                // Determine what identifier
                 theSymbol = getSymbolTable().get(lexeme);
 
-                // if the symbol was not in the symbol table, it is an identifier and
+                // If the symbol was not in the symbol table, it is an identifier and
                 // should be populated into the table
                 if (theSymbol == null) {
-                    if (Character.isLetter(lexeme.charAt(0))) {
-                        // First character is a letter, must be an identifier
+                    if (currentState == State.SYMBOL) {
+                        // If we're in the SYMBOL state, this must have been
+                        // an unknown symbol, so we can infer it to be a new identifier
                         theSymbol = new Lexeme(lexeme, Token.IDENTIFIER);
                     } else if (currentState == State.WHITESPACE) {
-                        // Lexeme must have been whitespace. Java trims all newline, tabs, and spaces.
+                        // It's whitespace if we were in the WHITESPACE state
                         theSymbol = new Lexeme(lexeme, Token.WHITESPACE);
                     } else if (currentState == State.COMMENT) {
+                        // It's a comment if we were in the COMMENT state
                         theSymbol = new Lexeme(lexeme, Token.COMMENT);
                     } else if (currentState == State.STRING_CONST) {
+                        // It's a STRING_CONST if we were in the STRING_CONST state
                         theSymbol = new Lexeme(lexeme, Token.STRING_CONST);
-                    } else {
-                        // Lexeme must be number
+                    } else if (currentState == State.NUMBER) {
+                        // It's a NUMBER if we were in the NUMBER state
                         theSymbol = new Lexeme(lexeme, Token.NUMBER);
                     }
 

@@ -12,7 +12,7 @@ begin
     v := 102;
 
     while u > 0 do
-    begin
+    begin:
        if u < v then
        begin
           t := u;

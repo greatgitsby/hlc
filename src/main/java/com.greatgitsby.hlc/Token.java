@@ -21,11 +21,7 @@ public enum Token implements Symbol {
     MULTIPLICATIVE_OP,
     RELATIONAL_OP,
     ASSIGNMENT_OP,
-    ADDITIVE_OP() {
-        public void doTheThing() {
-            // Overrides - custom behavior
-        }
-    },
+    ADDITIVE_OP,
     STATEMENT_SEP,
     LEFT_PAREN,
     RIGHT_PAREN,

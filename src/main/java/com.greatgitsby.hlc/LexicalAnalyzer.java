@@ -54,10 +54,10 @@ public class LexicalAnalyzer {
         getSymbolTable().put("(", Token.LEFT_PAREN);
         getSymbolTable().put(")", Token.RIGHT_PAREN);
 
-
         // START state map
         HashMap<Character, State> startMap = new HashMap<>();
 
+        // START machine states
         startMap.put(' ', State.WHITESPACE);
         startMap.put('\n', State.WHITESPACE);
         startMap.put('\t', State.WHITESPACE);
@@ -65,9 +65,17 @@ public class LexicalAnalyzer {
         startMap.put(DIGIT, State.NUMBER);
         startMap.put('+', State.ADDITIVE_OP);
         startMap.put('-', State.ADDITIVE_OP);
+        startMap.put('*', State.MULTIPLICATIVE_OP);
+        startMap.put('/', State.MULTIPLICATIVE_OP);
         startMap.put('(', State.LEFT_PAREN);
         startMap.put(')', State.RIGHT_PAREN);
         startMap.put(';', State.STATEMENT_SEP);
+        startMap.put('=', State.EQUAL_TO);
+        startMap.put('>', State.GREATER_THAN);
+        startMap.put('<', State.LESS_THAN);
+        startMap.put('{', State.IN_COMMENT);
+        startMap.put('"', State.IN_STRING);
+        startMap.put(':', State.COLON);
 
         // Insert START state machine
         getStateTable().put(State.START, startMap);
@@ -92,17 +100,66 @@ public class LexicalAnalyzer {
         // Insert NUMBER state machine
         getStateTable().put(State.NUMBER, numberMap);
 
-        // Insert ADDITIVE_OP state machine (no edges)
+        // GREATER_THAN state map
+        HashMap<Character, State> greaterThanMap = new HashMap<>();
+
+        // GREATER_THAN machine states
+        greaterThanMap.put('=', State.GREATER_THAN_EQUAL_TO);
+
+        // Insert GREATER_THAN state machine into state table
+        getStateTable().put(State.GREATER_THAN, greaterThanMap);
+
+        // Insert GREATER_THAN_EQUAL_TO state machine (no transitions other than START)
+        getStateTable().put(State.GREATER_THAN_EQUAL_TO, new HashMap<>());
+
+        // LESS_THAN state map
+        HashMap<Character, State> lessThanMap = new HashMap<>();
+
+        // LESS_THAN machine states
+        lessThanMap.put('>', State.NOT_EQUAL_TO);
+        lessThanMap.put('=', State.LESS_THAN_EQUAL_TO);
+
+        // Insert LESS_THAN state machine into state table
+        getStateTable().put(State.LESS_THAN, lessThanMap);
+
+        // Insert LESS_THAN_EQUAL_TO state machine (no transitions other than START)
+        getStateTable().put(State.LESS_THAN_EQUAL_TO, new HashMap<>());
+
+        // Insert NOT_EQUAL_TO state machine (no transitions other than START)
+        getStateTable().put(State.NOT_EQUAL_TO, new HashMap<>());
+
+        // Insert ADDITIVE_OP state machine (no transitions other than START)
         getStateTable().put(State.ADDITIVE_OP, new HashMap<>());
 
-        // Insert LEFT_PAREN state machine (no edges)
+        // Insert MULTIPLICATIVE_OP state machine (no transitions other than START)
+        getStateTable().put(State.MULTIPLICATIVE_OP, new HashMap<>());
+
+        // Insert WHITESPACE state machine (no transitions other than START)
+        getStateTable().put(State.WHITESPACE, new HashMap<>());
+
+        // Insert LEFT_PAREN state machine (no transitions other than START)
         getStateTable().put(State.LEFT_PAREN, new HashMap<>());
 
-        // Insert RIGHT_PAREN state machine (no edges)
+        // Insert RIGHT_PAREN state machine (no transitions other than START)
         getStateTable().put(State.RIGHT_PAREN, new HashMap<>());
 
-        // Insert STATEMENT_SEP state machine (no edges)
+        // Insert STATEMENT_SEP state machine (no transitions other than START)
         getStateTable().put(State.STATEMENT_SEP, new HashMap<>());
+
+        getStateTable().put(State.IN_COMMENT, new HashMap<>());
+        getStateTable().put(State.COMMENT, new HashMap<>());
+
+        getStateTable().put(State.IN_STRING, new HashMap<>());
+        getStateTable().put(State.STRING_CONST, new HashMap<>());
+
+        // COLON state map
+        HashMap<Character, State> colonMap = new HashMap<>();
+
+        colonMap.put('=', State.ASSIGNMENT_OP);
+
+        getStateTable().put(State.COLON, colonMap);
+
+        getStateTable().put(State.ASSIGNMENT_OP, new HashMap<>());
     }
 
     public void analyze(String filename) throws Exception {
@@ -112,12 +169,11 @@ public class LexicalAnalyzer {
         String lexeme;
         Symbol theSymbol;
 
-        int lineNumber = 0;
-        int charNumber = 0;
+        int lineNumber = 1;
+        int charNumber = 1;
 
         State currentState = State.START;
         StringBuilder lexemeValue = new StringBuilder();
-
 
         if (filename == null) {
             throw new IllegalArgumentException("Filename must be not null");
@@ -142,6 +198,7 @@ public class LexicalAnalyzer {
             // TODO determine if this works
             if (normalizedChar == '\n') {
                 lineNumber++;
+                charNumber = 1;
             }
 
             // check if there is a next state, if not, we've hit a dead end and
@@ -150,18 +207,24 @@ public class LexicalAnalyzer {
             if (getStateTable().get(currentState).containsKey(normalizedChar)) {
                 // has next state, get it!
                 currentState = getStateTable().get(currentState).get(normalizedChar);
-
-                if (theChar != ' ' && theChar != '\n') {
-                    lexemeValue.append(Character.toString(theChar));
-                }
-
+                lexemeValue.append(Character.toString(theChar));
                 charNumber++;
+            } else if (currentState == State.IN_COMMENT) {
+                lexemeValue.append(Character.toString(theChar));
+                charNumber++;
+
+                if (normalizedChar == '}') {
+                    currentState = State.COMMENT;
+                }
+            } else if (currentState == State.IN_STRING) {
+                lexemeValue.append(Character.toString(theChar));
+                charNumber++;
+
+                if (normalizedChar == '"') {
+                    currentState = State.STRING_CONST;
+                }
             } else if (currentState.isAccepting()) {
                 theReader.unread(theChar);
-
-                // Decrement the char number since we are pushing the char
-                // back into the PushbackReader
-                charNumber--;
 
                 // Get the current value of the lexeme
                 lexeme = lexemeValue.toString();
@@ -172,14 +235,20 @@ public class LexicalAnalyzer {
                 // if the symbol was not in the symbol table, it is an identifier and
                 // should be populated into the table
                 if (theSymbol == null) {
-                    // Determine if first character in lexeme is number. If it is,
-                    // the lexeme must be a number.
                     if (Character.isLetter(lexeme.charAt(0))) {
+                        // First character is a letter, must be an identifier
                         theSymbol = new Lexeme(lexeme, Token.IDENTIFIER);
+                    } else if (currentState == State.WHITESPACE) {
+                        // Lexeme must have been whitespace. Java trims all newline, tabs, and spaces.
+                        theSymbol = new Lexeme(lexeme, Token.WHITESPACE);
+                    } else if (currentState == State.COMMENT) {
+                        theSymbol = new Lexeme(lexeme, Token.COMMENT);
+                    } else if (currentState == State.STRING_CONST) {
+                        theSymbol = new Lexeme(lexeme, Token.STRING_CONST);
                     } else {
+                        // Lexeme must be number
                         theSymbol = new Lexeme(lexeme, Token.NUMBER);
                     }
-
 
                     getSymbolTable().put(lexeme, theSymbol);
                 }
@@ -195,7 +264,7 @@ public class LexicalAnalyzer {
             } else {
                 // error
                 // TODO print line number and char number along with error state
-                throw new Exception("BAD state!");
+                throw new Exception(String.format("Line %d, Char %d: Bad state, got %s", lineNumber, charNumber, (char) theChar));
             }
         }
 

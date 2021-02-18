@@ -20,6 +20,6 @@ public class Lexeme implements Symbol {
 
     @Override
     public String toString() {
-        return _tokenType.toString();
+        return String.format("%s (%s)", _tokenType.toString(), _value.toString().trim());
     }
 }

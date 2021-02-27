@@ -3,60 +3,100 @@ package com.greatgitsby.hlc;
 import java.io.*;
 import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
  * LexicalAnalyzer
  *
- * Analyzes a file lexically
- * TODO Add description
+ * Performs the lexical analysis of an input file as conforming
+ * to the Hansen programming language. It is a table-driven
+ * finite state automata backed by a symbol table that remembers
+ * variables from the input file and reserved keywords of the
+ * Hansen language. Once complete, a queue of Symbols is left
+ * in the _symbols deque for the programmer to utilize
+ * (in preparation of passing to a Parser...)
  */
-public class LexicalAnalyzer {
-    private final ArrayDeque<Symbol> _lexemes;
-    private final HashMap<String, Symbol> _symbolTable;
+public class LexicalAnalyzer implements Iterable<Symbol> {
+    private final ArrayDeque<Symbol> _symbols;
     private final HashMap<State, HashMap<Character, State>> _stateTable;
+    public final HashMap<String, Symbol> _symbolTable;
 
-    private static final char DIGIT = '0';
-    private static final char LETTER = 'a';
+    // Static variables
+    private static final char CARRIAGE_RETURN = '\r';
     private static final char END_COMMENT = '}';
     private static final char END_STRING_CONST = '"';
+    private static final char DIGIT = '0';
+    private static final char LETTER = 'a';
+    private static final char NEWLINE = '\n';
+    private static final char TAB = '\t';
 
-    public LexicalAnalyzer() {
-        _lexemes = new ArrayDeque<>();
-        _symbolTable = new HashMap<>();
+    /**
+     * Constructs a new Lexical Analyzer, parsing an input file
+     * into a set of Symbols
+     *
+     * @param filepath the path to the input file
+     * @throws IOException if the file does not exist or a read error occurs
+     * @throws IllegalArgumentException if the filepath is null
+     * @throws SyntaxErrorException if the input file
+     */
+    public LexicalAnalyzer(String filepath)
+        throws IOException, IllegalArgumentException, SyntaxErrorException
+    {
+        _symbols = new ArrayDeque<>();
         _stateTable = new HashMap<>();
 
-        getSymbolTable().put("variable", Token.VARIABLE);
-        getSymbolTable().put("print", Token.PRINT);
-        getSymbolTable().put("if", Token.IF);
-        getSymbolTable().put("then", Token.THEN);
-        getSymbolTable().put("else", Token.ELSE);
-        getSymbolTable().put("while", Token.WHILE);
-        getSymbolTable().put("do", Token.DO);
-        getSymbolTable().put("begin", Token.BEGIN);
-        getSymbolTable().put("end", Token.END);
-        getSymbolTable().put("+", Token.ADDITIVE_OP);
-        getSymbolTable().put("-", Token.ADDITIVE_OP);
-        getSymbolTable().put("<", Token.RELATIONAL_OP);
-        getSymbolTable().put("<=", Token.RELATIONAL_OP);
-        getSymbolTable().put("<>", Token.RELATIONAL_OP);
-        getSymbolTable().put("=", Token.RELATIONAL_OP);
-        getSymbolTable().put(">", Token.RELATIONAL_OP);
-        getSymbolTable().put(">=", Token.RELATIONAL_OP);
-        getSymbolTable().put("*", Token.MULTIPLICATIVE_OP);
-        getSymbolTable().put("/", Token.MULTIPLICATIVE_OP);
-        getSymbolTable().put(":=", Token.ASSIGNMENT_OP);
-        getSymbolTable().put(";", Token.STATEMENT_SEP);
-        getSymbolTable().put("(", Token.LEFT_PAREN);
-        getSymbolTable().put(")", Token.RIGHT_PAREN);
+        // Insert all of our reserved keywords as "symbols" in
+        // our symbol table
+        _symbolTable = new HashMap<>() {{
+            put("variable", Token.VARIABLE);
+            put("print", Token.PRINT);
+            put("if", Token.IF);
+            put("then", Token.THEN);
+            put("else", Token.ELSE);
+            put("while", Token.WHILE);
+            put("do", Token.DO);
+            put("begin", Token.BEGIN);
+            put("end", Token.END);
+            put("+", Token.ADDITIVE_OP);
+            put("-", Token.ADDITIVE_OP);
+            put("<", Token.RELATIONAL_OP);
+            put("<=", Token.RELATIONAL_OP);
+            put("<>", Token.RELATIONAL_OP);
+            put("=", Token.RELATIONAL_OP);
+            put(">", Token.RELATIONAL_OP);
+            put(">=", Token.RELATIONAL_OP);
+            put("*", Token.MULTIPLICATIVE_OP);
+            put("/", Token.MULTIPLICATIVE_OP);
+            put(":=", Token.ASSIGNMENT_OP);
+            put(";", Token.STATEMENT_SEP);
+            put("(", Token.LEFT_PAREN);
+            put(")", Token.RIGHT_PAREN);
+        }};
 
         // START state map
         HashMap<Character, State> startMap = new HashMap<>();
 
+        // NUMBER state map
+        HashMap<Character, State> numberMap = new HashMap<>();
+
+        // SYMBOL state machine map
+        HashMap<Character, State> symbolMap = new HashMap<>();
+
+        // GREATER_THAN state map
+        HashMap<Character, State> greaterThanMap = new HashMap<>();
+
+        // LESS_THAN state map
+        HashMap<Character, State> lessThanMap = new HashMap<>();
+
+        // COLON state map
+        HashMap<Character, State> colonMap = new HashMap<>();
+
         // START machine states
         startMap.put(' ', State.WHITESPACE);
-        startMap.put('\n', State.WHITESPACE);
-        startMap.put('\t', State.WHITESPACE);
+        startMap.put(CARRIAGE_RETURN, State.WHITESPACE);
+        startMap.put(NEWLINE, State.WHITESPACE);
+        startMap.put(TAB, State.WHITESPACE);
         startMap.put(LETTER, State.SYMBOL);
         startMap.put(DIGIT, State.NUMBER);
         startMap.put('+', State.ADDITIVE_OP);
@@ -76,9 +116,6 @@ public class LexicalAnalyzer {
         // Insert START state machine
         getStateTable().put(State.START, startMap);
 
-        // SYMBOL state machine map
-        HashMap<Character, State> symbolMap = new HashMap<>();
-
         // SYMBOL machine states
         symbolMap.put(LETTER, State.SYMBOL);
         symbolMap.put(DIGIT, State.SYMBOL);
@@ -87,17 +124,11 @@ public class LexicalAnalyzer {
         // Insert SYMBOL state machine
         getStateTable().put(State.SYMBOL, symbolMap);
 
-        // NUMBER state map
-        HashMap<Character, State> numberMap = new HashMap<>();
-
         // NUMBER machine states
         numberMap.put(DIGIT, State.NUMBER);
 
         // Insert NUMBER state machine
         getStateTable().put(State.NUMBER, numberMap);
-
-        // GREATER_THAN state map
-        HashMap<Character, State> greaterThanMap = new HashMap<>();
 
         // GREATER_THAN machine states
         greaterThanMap.put('=', State.GREATER_THAN_EQUAL_TO);
@@ -105,11 +136,9 @@ public class LexicalAnalyzer {
         // Insert GREATER_THAN state machine into state table
         getStateTable().put(State.GREATER_THAN, greaterThanMap);
 
-        // Insert GREATER_THAN_EQUAL_TO state machine (no transitions other than START)
+        // Insert GREATER_THAN_EQUAL_TO state machine (no transitions other
+        // than START)
         getStateTable().put(State.GREATER_THAN_EQUAL_TO, new HashMap<>());
-
-        // LESS_THAN state map
-        HashMap<Character, State> lessThanMap = new HashMap<>();
 
         // LESS_THAN machine states
         lessThanMap.put('>', State.NOT_EQUAL_TO);
@@ -118,7 +147,14 @@ public class LexicalAnalyzer {
         // Insert LESS_THAN state machine into state table
         getStateTable().put(State.LESS_THAN, lessThanMap);
 
-        // Insert LESS_THAN_EQUAL_TO state machine (no transitions other than START)
+        // COLON machine states
+        colonMap.put('=', State.ASSIGNMENT_OP);
+
+        // Insert COLON state map into the state table
+        getStateTable().put(State.COLON, colonMap);
+
+        // Insert LESS_THAN_EQUAL_TO state machine (no transitions other than
+        // START)
         getStateTable().put(State.LESS_THAN_EQUAL_TO, new HashMap<>());
 
         // Insert NOT_EQUAL_TO state machine (no transitions other than START)
@@ -127,7 +163,8 @@ public class LexicalAnalyzer {
         // Insert ADDITIVE_OP state machine (no transitions other than START)
         getStateTable().put(State.ADDITIVE_OP, new HashMap<>());
 
-        // Insert MULTIPLICATIVE_OP state machine (no transitions other than START)
+        // Insert MULTIPLICATIVE_OP state machine (no transitions other than
+        // START)
         getStateTable().put(State.MULTIPLICATIVE_OP, new HashMap<>());
 
         // Insert WHITESPACE state machine (no transitions other than START)
@@ -142,87 +179,131 @@ public class LexicalAnalyzer {
         // Insert STATEMENT_SEP state machine (no transitions other than START)
         getStateTable().put(State.STATEMENT_SEP, new HashMap<>());
 
+        // Insert STATEMENT_SEP state machine (no transitions other than START)
         getStateTable().put(State.IN_COMMENT, new HashMap<>());
+
+        // Insert STATEMENT_SEP state machine (no transitions other than START)
         getStateTable().put(State.COMMENT, new HashMap<>());
 
+        // Insert STATEMENT_SEP state machine (no transitions other than START)
         getStateTable().put(State.IN_STRING, new HashMap<>());
+
+        // Insert STATEMENT_SEP state machine (no transitions other than START)
         getStateTable().put(State.STRING_CONST, new HashMap<>());
 
-        // COLON state map
-        HashMap<Character, State> colonMap = new HashMap<>();
-
-        colonMap.put('=', State.ASSIGNMENT_OP);
-
-        getStateTable().put(State.COLON, colonMap);
-
+        // Insert ASSIGNMENT_OP state machine (no transitions other than START)
         getStateTable().put(State.ASSIGNMENT_OP, new HashMap<>());
+
+        // Analyze the input file and prepare the set of symbols
+        // for processing
+        this.analyze(filepath);
     }
 
-    public void analyze(String filename) throws Exception {
-        int theChar;
-        PushbackReader theReader;
+    /**
+     * Analyze a file and generate a set of representative Symbols
+     *
+     * @param filepath the file to process
+     * @throws IOException if the file does not exist or a read error occurs
+     * @throws IllegalArgumentException if the filepath is null
+     * @throws SyntaxErrorException if the input file has a syntax error
+     */
+    private void analyze(String filepath)
+        throws IOException, IllegalArgumentException, SyntaxErrorException
+    {
+        // Variable declarations
         File theFile;
+        PushbackReader theReader;
+        State currentState;
         String lexeme;
+        StringBuilder lexemeValue;
         Symbol theSymbol;
+        int lineNumber;
+        int charNumber;
+        int theChar;
+        char normalizedChar;
 
-        int lineNumber = 1;
-        int charNumber = 1;
+        // Initialize lexeme
+        lexemeValue = new StringBuilder();
 
-        State currentState = State.START;
-        StringBuilder lexemeValue = new StringBuilder();
+        // Move state machine to START state
+        currentState = State.START;
 
-        if (filename == null) {
-            throw new IllegalArgumentException("Filename must be not null");
+        // Initialize the line and character locations at 1, 1
+        lineNumber = 1;
+        charNumber = 1;
+
+        // We can't have a null filepath
+        if (filepath == null) {
+            throw new IllegalArgumentException("File path must be not null");
         }
 
-        theFile = new File(filename);
-        theReader = new PushbackReader(new FileReader(theFile.getAbsoluteFile()));
+        // Create file and file reader
+        theFile = new File(filepath);
+        theReader = new PushbackReader(
+            new FileReader(theFile.getAbsoluteFile())
+        );
 
         // Process each character
         while ((theChar = theReader.read()) != -1) {
-            //
-            char normalizedChar = (char) theChar;
+            normalizedChar = (char) theChar;
 
-            // Normal letters and numbers for the
+            // Normalize letters and numbers for the
             // state table
-            if (Character.isLetter(normalizedChar)) {
-                normalizedChar = LETTER;
-            } else if (Character.isDigit(normalizedChar)) {
+            if (Character.isDigit(normalizedChar)) {
                 normalizedChar = DIGIT;
+            } else if (Character.isLetter(normalizedChar)) {
+                normalizedChar = LETTER;
             }
 
-            // TODO determine if this works
-            if (normalizedChar == '\n') {
-                lineNumber++;
-                charNumber = 1;
-            }
-
-            // check if there is a next state, if not, we've hit a dead end and
-            // need to determine next steps. is this state accepting? if it isn't,
-            // we certainly have read a syntactically incompatible line of code
-            if (getStateTable().get(currentState).containsKey(normalizedChar)) {
-                // has next state, get it!
-                currentState = getStateTable().get(currentState).get(normalizedChar);
-                lexemeValue.append(Character.toString(theChar));
-                charNumber++;
-            } else if (currentState == State.IN_COMMENT) {
+            // Handle the IN_COMMENT and IN_STRING states, consume all
+            // characters until we hit either of the characters that
+            // signal the end of a comment or a string const
+            if (
+                currentState == State.IN_COMMENT ||
+                currentState == State.IN_STRING
+            ) {
+                // Add the incoming character to the lexeme
                 lexemeValue.append(Character.toString(theChar));
                 charNumber++;
 
+                // If we have hit the END_COMMENT character,
+                // it is time to move to the COMMENT state
                 if (normalizedChar == END_COMMENT) {
                     currentState = State.COMMENT;
                 }
-            } else if (currentState == State.IN_STRING) {
-                lexemeValue.append(Character.toString(theChar));
-                charNumber++;
 
                 // If we have hit the END_STRING_CONST character,
                 // it is time to move to the STRING_CONST state
                 if (normalizedChar == END_STRING_CONST) {
                     currentState = State.STRING_CONST;
                 }
+            }
+            // Check if there is a next state, if not, we've hit a dead end
+            // and need to determine next steps. is this state accepting?
+            // If it isn't, we certainly have read a syntactically
+            // incorrect line of code
+            else if (
+                getStateTable().containsKey(currentState) &&
+                getStateTable().get(currentState).containsKey(normalizedChar)
+            ) {
+                // Has next state, get it!
+                currentState = getStateTable()
+                    .get(currentState)
+                    .get(normalizedChar);
+
+                // Add the character to the lexeme
+                lexemeValue.append(Character.toString(theChar));
+                charNumber++;
             } else if (currentState.isAccepting()) {
+                // Push the last character back onto the pushback
+                // reader
                 theReader.unread(theChar);
+
+                // If the character is a new line, "back up
+                // to the previous line"
+                if (theChar == NEWLINE) {
+                    lineNumber--;
+                }
 
                 // Get the current value of the lexeme
                 lexeme = lexemeValue.toString();
@@ -230,32 +311,39 @@ public class LexicalAnalyzer {
                 // Determine what identifier
                 theSymbol = getSymbolTable().get(lexeme);
 
-                // If the symbol was not in the symbol table, it is an identifier and
-                // should be populated into the table
+                // If the symbol was not in the symbol table, it is an
+                // identifier and should be populated into the table
                 if (theSymbol == null) {
+                    // If we're in the SYMBOL state, this must have been
+                    // an unknown symbol, so we can infer it to be a
+                    // new identifier
                     if (currentState == State.SYMBOL) {
-                        // If we're in the SYMBOL state, this must have been
-                        // an unknown symbol, so we can infer it to be a new identifier
                         theSymbol = new Lexeme(lexeme, Token.IDENTIFIER);
-                    } else if (currentState == State.WHITESPACE) {
-                        // It's whitespace if we were in the WHITESPACE state
+                    }
+                    // It's whitespace if we were in the WHITESPACE state
+                    else if (currentState == State.WHITESPACE) {
                         theSymbol = new Lexeme(lexeme, Token.WHITESPACE);
-                    } else if (currentState == State.COMMENT) {
-                        // It's a comment if we were in the COMMENT state
+                    }
+                    // It's a comment if we were in the COMMENT state
+                    else if (currentState == State.COMMENT) {
                         theSymbol = new Lexeme(lexeme, Token.COMMENT);
-                    } else if (currentState == State.STRING_CONST) {
-                        // It's a STRING_CONST if we were in the STRING_CONST state
+                    }
+                    // It's a STRING_CONST if we were in the STRING_CONST
+                    // state
+                    else if (currentState == State.STRING_CONST) {
                         theSymbol = new Lexeme(lexeme, Token.STRING_CONST);
-                    } else if (currentState == State.NUMBER) {
-                        // It's a NUMBER if we were in the NUMBER state
+                    }
+                    // It's a NUMBER if we were in the NUMBER state
+                    else if (currentState == State.NUMBER) {
                         theSymbol = new Lexeme(lexeme, Token.NUMBER);
                     }
 
+                    // Insert the new symbol into the symbol table
                     getSymbolTable().put(lexeme, theSymbol);
                 }
 
                 // Add lexeme to the "stream"
-                addLexeme(theSymbol);
+                queueSymbol(theSymbol);
 
                 // Clear old StringBuilder value
                 lexemeValue = new StringBuilder();
@@ -263,31 +351,43 @@ public class LexicalAnalyzer {
                 // Go back to START state
                 currentState = State.START;
             } else {
-                // error
-                // TODO print line number and char number along with error state
-                throw new Exception(String.format("Line %d, Char %d: Bad state, got %s", lineNumber, charNumber, (char) theChar));
+                // Invalid syntax, print location of error
+                throw new SyntaxErrorException(
+                    String.format(
+                        "Line %d, Char %d: Invalid Syntax",
+                        lineNumber, charNumber
+                    )
+                );
             }
+
+            // "Go to next line"
+            if (normalizedChar == NEWLINE) {
+                lineNumber++;
+                charNumber = 1;
+            }
+        }
+
+        // If we hit EOF and are still IN_STRING or IN_COMMENT,
+        // then the syntax was incorrect -- either a string
+        // or a comment was not closed
+        if (currentState == State.IN_STRING) {
+            throw new SyntaxErrorException("String not closed");
+        } else if (currentState == State.IN_COMMENT) {
+            throw new SyntaxErrorException("Comment not closed");
         }
 
         // Push the final END_OF_INPUT char onto the stack
         // for our end state
-        addLexeme(Token.END_OF_INPUT);
+        queueSymbol(Token.END_OF_INPUT);
     }
 
     /**
-     * Gets the state table and returns it
-     * @return the state table
+     * Get the Lexical Analyzer's symbol table
+     *
+     * @return the symbol table
      */
-    private HashMap<State, HashMap<Character, State>> getStateTable() {
-        return _stateTable;
-    }
-
-    private HashMap<String, Symbol> getSymbolTable() {
+    public HashMap<String, Symbol> getSymbolTable() {
         return _symbolTable;
-    }
-
-    private void addLexeme(Symbol lexemeToAdd) {
-        _lexemes.add(lexemeToAdd);
     }
 
     /**
@@ -296,7 +396,7 @@ public class LexicalAnalyzer {
      * @return true if there is another lexeme to return
      */
     public boolean hasNextLexeme() {
-        return !_lexemes.isEmpty();
+        return !_symbols.isEmpty();
     }
 
     /**
@@ -307,6 +407,30 @@ public class LexicalAnalyzer {
      * @throws NoSuchElementException if there are no more lexemes to return
      */
     public Symbol nextLexeme() throws NoSuchElementException {
-        return _lexemes.remove();
+        return _symbols.remove();
+    }
+
+    /**
+     * Gets the Lexical Analyzer's state table and returns it
+     *
+     * @return the state table
+     */
+    private HashMap<State, HashMap<Character, State>> getStateTable() {
+        return _stateTable;
+    }
+
+    /**
+     * Add a new symbol into the "stream" of tokens
+     * (can be a Lexeme or a Token)
+     *
+     * @param symbolToAdd the symbol to add
+     */
+    private void queueSymbol(Symbol symbolToAdd) {
+        _symbols.add(symbolToAdd);
+    }
+
+    @Override
+    public Iterator<Symbol> iterator() {
+        return _symbols.iterator();
     }
 }

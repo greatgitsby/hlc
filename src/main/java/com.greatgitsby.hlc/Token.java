@@ -3,7 +3,8 @@ package com.greatgitsby.hlc;
 /**
  * Token
  *
- * TODO Add description
+ * Each Token is an element of the Hansen programming
+ * language
  */
 public enum Token implements Symbol {
     VARIABLE,
@@ -29,7 +30,10 @@ public enum Token implements Symbol {
     COMMENT,
     END_OF_INPUT;
 
+    /**
+     * Do that thing!
+     */
     public void doTheThing() {
-        // General behavior
+        // TODO Implement general behavior
     }
 }

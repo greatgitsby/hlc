@@ -3,10 +3,12 @@ package com.greatgitsby.hlc;
 /**
  * Symbol
  *
- * TODO Add description
+ * To be used later in the HLC assignment...
+ *
+ * For now, it is a thing we use to represent elements of the
+ * programming language Hansen
  */
 public interface Symbol {
-
     /**
      * Do that thing!
      */

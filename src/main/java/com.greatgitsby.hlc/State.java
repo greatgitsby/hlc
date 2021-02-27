@@ -1,23 +1,19 @@
 package com.greatgitsby.hlc;
 
 /**
- * LexicalAnalyzerState
+ * State
  *
- * TODO Add description
+ * Defines each state the Lexical Analyzer can be in
  */
 public enum State {
     START() {
         @Override
-        public boolean isAccepting() {
-            return false;
-        }
+        public boolean isAccepting() { return false; }
     },
     SYMBOL,
     COLON() {
         @Override
-        public boolean isAccepting() {
-            return false;
-        }
+        public boolean isAccepting() { return false; }
     },
     ASSIGNMENT_OP,
     NUMBER,
@@ -35,24 +31,19 @@ public enum State {
     LESS_THAN_EQUAL_TO,
     IN_COMMENT() {
         @Override
-        public boolean isAccepting() {
-            return false;
-        }
+        public boolean isAccepting() { return false; }
     },
     IN_STRING() {
         @Override
-        public boolean isAccepting() {
-            return false;
-        }
+        public boolean isAccepting() { return false; }
     },
     COMMENT,
     STRING_CONST;
 
     /**
-     * TODO description
-     * @return
+     * Determines if the State is accepting
+     *
+     * @return true if the State is accepting
      */
-    public boolean isAccepting() {
-        return true;
-    }
+    public boolean isAccepting() { return true; }
 }

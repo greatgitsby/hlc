@@ -8,14 +8,14 @@ import java.util.Map;
  * TODO Description
  */
 public class Parser {
-    private final LexicalAnalyzer _lexer;
+    private final LexicalAnalyzer _lexicalAnalyzer;
     private final Map<Symbol, Map<Symbol, List<Symbol>>> _parseTable;
 
     /**
-     * TODO Description
+     * Construct a new Parser
      */
     public Parser(LexicalAnalyzer lexer) {
-        _lexer = lexer;
+        _lexicalAnalyzer = lexer;
         _parseTable = new HashMap<>();
     }
 
@@ -24,6 +24,15 @@ public class Parser {
      */
     public boolean isValidSyntax() {
         return false;
+    }
+
+    /**
+     * Returns the lexical analyzer of this Parser
+     *
+     * @return the lexical analyzer of this Parser
+     */
+    public LexicalAnalyzer getLexicalAnalyzer() {
+        return _lexicalAnalyzer;
     }
 
     /**

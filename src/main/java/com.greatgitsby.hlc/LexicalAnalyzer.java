@@ -20,7 +20,7 @@ import java.util.NoSuchElementException;
 public class LexicalAnalyzer implements Iterable<Symbol> {
     private final ArrayDeque<Symbol> _symbols;
     private final HashMap<State, HashMap<Character, State>> _stateTable;
-    public final HashMap<String, Symbol> _symbolTable;
+    private final HashMap<String, Symbol> _symbolTable;
 
     // Static variables
     private static final char CARRIAGE_RETURN = '\r';
@@ -406,7 +406,7 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
      * @return the next lexeme
      * @throws NoSuchElementException if there are no more lexemes to return
      */
-    public Symbol nextLexeme() throws NoSuchElementException {
+     public Symbol nextLexeme() throws NoSuchElementException {
         return _symbols.remove();
     }
 

@@ -35,7 +35,9 @@ public class Lexeme implements Symbol {
      * {@inheritDoc}
      */
     @Override
-    public void doTheThing() { }
+    public void doTheThing() {
+        getTokenType().doTheThing();
+    }
 
     /**
      * Creates a string representation of this lexeme.

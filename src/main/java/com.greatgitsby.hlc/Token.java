@@ -31,8 +31,9 @@ public enum Token implements Symbol {
     END_OF_INPUT;
 
     /**
-     * Do that thing!
+     * General behavior for terminals
      */
+    @Override
     public void doTheThing() {
         // TODO Implement general behavior
     }

@@ -1,10 +1,7 @@
 package com.greatgitsby.hlc;
 
 import java.io.*;
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 /**
  * LexicalAnalyzer
@@ -18,7 +15,7 @@ import java.util.NoSuchElementException;
  * (in preparation of passing to a Parser...)
  */
 public class LexicalAnalyzer implements Iterable<Symbol> {
-    private final ArrayDeque<Symbol> _symbols;
+    private final ArrayDeque<Symbol> _symbolQueue;
     private final HashMap<State, HashMap<Character, State>> _stateTable;
     private final HashMap<String, Symbol> _symbolTable;
 
@@ -26,6 +23,7 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
     private static final char CARRIAGE_RETURN = '\r';
     private static final char END_COMMENT = '}';
     private static final char END_STRING_CONST = '"';
+    private static final int  EOF = -1;
     private static final char DIGIT = '0';
     private static final char LETTER = 'a';
     private static final char NEWLINE = '\n';
@@ -43,7 +41,7 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
     public LexicalAnalyzer(String filepath)
         throws IOException, IllegalArgumentException, SyntaxErrorException
     {
-        _symbols = new ArrayDeque<>();
+        _symbolQueue = new ArrayDeque<>();
         _stateTable = new HashMap<>();
 
         // Insert all of our reserved keywords as "symbols" in
@@ -222,6 +220,8 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
         int theChar;
         char normalizedChar;
 
+        boolean running = true;
+
         // Initialize lexeme
         lexemeValue = new StringBuilder();
 
@@ -244,7 +244,15 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
         );
 
         // Process each character
-        while ((theChar = theReader.read()) != -1) {
+        while (running) {
+            // Read in the next character from the reader
+            theChar = theReader.read();
+
+            // If the read-in char is EOF, we should stop running
+            running = theChar != EOF;
+
+            // Copy the read-in char so we can normalize it
+            // if it is alphanumeric
             normalizedChar = (char) theChar;
 
             // Normalize letters and numbers for the
@@ -342,8 +350,14 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                     getSymbolTable().put(lexeme, theSymbol);
                 }
 
-                // Add lexeme to the "stream"
-                queueSymbol(theSymbol);
+                // Don't add whitespace or comments to symbol stack
+                if (
+                    currentState != State.WHITESPACE &&
+                    currentState != State.COMMENT
+                ) {
+                    // Add lexeme to the "stream"
+                    queueSymbol(theSymbol);
+                }
 
                 // Clear old StringBuilder value
                 lexemeValue = new StringBuilder();
@@ -396,7 +410,7 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
      * @return true if there is another lexeme to return
      */
     public boolean hasNextLexeme() {
-        return !_symbols.isEmpty();
+        return !_symbolQueue.isEmpty();
     }
 
     /**
@@ -407,7 +421,16 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
      * @throws NoSuchElementException if there are no more lexemes to return
      */
      public Symbol nextLexeme() throws NoSuchElementException {
-        return _symbols.remove();
+        return _symbolQueue.pop();
+    }
+
+    /**
+     * Returns the stack of symbols that the lexical analyzer formulates
+     *
+     * @return the stack of symbols that the lexical analyzer formulates
+     */
+    public ArrayDeque<Symbol> getSymbolStack() {
+         return _symbolQueue;
     }
 
     /**
@@ -426,11 +449,11 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
      * @param symbolToAdd the symbol to add
      */
     private void queueSymbol(Symbol symbolToAdd) {
-        _symbols.add(symbolToAdd);
+        _symbolQueue.add(symbolToAdd);
     }
 
     @Override
     public Iterator<Symbol> iterator() {
-        return _symbols.iterator();
+        return _symbolQueue.iterator();
     }
 }

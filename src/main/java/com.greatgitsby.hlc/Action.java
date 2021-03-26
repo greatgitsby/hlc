@@ -4,7 +4,7 @@ public enum Action implements Symbol {
     GEN_LABELS;
 
     @Override
-    public void doTheThing() {
+    public void doTheThing(Parser theParser) {
 
     }
 }

@@ -34,7 +34,7 @@ public enum Token implements Symbol {
      * General behavior for terminals
      */
     @Override
-    public void doTheThing() {
+    public void doTheThing(Parser theParser) {
         // TODO Implement general behavior
     }
 }

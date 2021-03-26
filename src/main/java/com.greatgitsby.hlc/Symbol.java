@@ -12,5 +12,5 @@ public interface Symbol {
     /**
      * Do that thing!
      */
-    void doTheThing();
+    void doTheThing(Parser theParser);
 }

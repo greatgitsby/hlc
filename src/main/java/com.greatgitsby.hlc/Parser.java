@@ -12,6 +12,7 @@ public class Parser {
     private final Stack<Symbol> _operandStack;
     private final Stack<Symbol> _operatorStack;
     private final Stack<Symbol> _parseStack;
+    private Symbol _currentLexerSymbol;
 
     /**
      * Construct a new Parser
@@ -19,6 +20,7 @@ public class Parser {
     public Parser(LexicalAnalyzer lexer) {
         _lexicalAnalyzer = lexer;
 
+        _currentLexerSymbol = null;
         _labelStack = new Stack<>();
         _operandStack = new Stack<>();
         _operatorStack = new Stack<>();
@@ -31,20 +33,41 @@ public class Parser {
      */
     public boolean isValidSyntax() {
         ArrayDeque<Symbol> symbolStack;
-        Symbol currentSymbol;
-        boolean isValidSyntax = false;
+        Symbol topOfParseStack;
+        boolean isValidSyntax;
 
+        isValidSyntax = false;
         symbolStack = getLexicalAnalyzer().getSymbolStack();
 
-        while (!symbolStack.isEmpty()) {
-            currentSymbol = symbolStack.peek();
+        // Push the end symbol ($) onto the parse stack
+        getParseStack().push(Token.END_OF_INPUT);
 
-            System.out.println(currentSymbol);
 
+
+        while (!symbolStack.isEmpty() && !getParseStack().isEmpty()) {
+            // Set the current lexer symbol to the top of the symbol stack
+            setCurrentLexerSymbol(symbolStack.peek());
+
+            // Get the top of parse stack
+            topOfParseStack = getParseStack().peek();
+
+            // Tell top of parse stack to do its thing
+            topOfParseStack.doTheThing(this);
+
+            // TESTING
             symbolStack.pop();
         }
 
         return isValidSyntax;
+    }
+
+    /**
+     * Returns the current lexer symbol
+     *
+     * @return the current lexer symbol
+     */
+    public Symbol getCurrentLexerSymbol() {
+        return _currentLexerSymbol;
     }
 
     /**
@@ -81,5 +104,21 @@ public class Parser {
      */
     public Stack<Symbol> getOperatorStack() {
         return _operatorStack;
+    }
+
+    /**
+     * Returns the parse stack of this Parser
+     *
+     * @return the parse stack of this Parser
+     */
+    public Stack<Symbol> getParseStack() {
+        return _parseStack;
+    }
+
+    /**
+     * Sets the current lexer symbol
+     */
+    private void setCurrentLexerSymbol(Symbol currentSymbol) {
+        _currentLexerSymbol = currentSymbol;
     }
 }

@@ -4,12 +4,10 @@ import java.io.IOException;
 
 public class LexicalAnalyzerTest {
     public static void main(String[] args) throws IOException, SyntaxErrorException {
-        LexicalAnalyzer l = new LexicalAnalyzer(
-            "./src/test/java/com.greatgitsby.hlc/myboi.h"
+        System.out.println(
+            new Parser(new LexicalAnalyzer(
+                "./src/test/java/com.greatgitsby.hlc/myboi.h"
+            )).isValidSyntax()
         );
-
-        Parser p = new Parser(l);
-
-        System.out.println(p.isValidSyntax());
     }
 }

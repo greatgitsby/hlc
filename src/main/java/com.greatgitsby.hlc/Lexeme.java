@@ -35,7 +35,7 @@ public class Lexeme implements Symbol {
      * {@inheritDoc}
      */
     @Override
-    public void doTheThing(Parser theParser) {
+    public void doTheThing(Parser theParser)  throws SyntaxErrorException {
         getTokenType().doTheThing(theParser);
     }
 

@@ -38,23 +38,29 @@ public class Parser {
     public boolean isValidSyntax() throws SyntaxErrorException {
         boolean isValidSyntax;
 
-        isValidSyntax = false;
+        isValidSyntax = true;
 
         // Push the end symbol ($) onto the parse stack
         getParseStack().push(Token.END_OF_INPUT);
         getParseStack().push(Token.STATEMENT);
 
-        while (!getLexicalAnalyzer().getSymbolStack().isEmpty() && !getParseStack().isEmpty()) {
+        while (!getLexicalAnalyzer().getSymbolStack().isEmpty() && !getParseStack().isEmpty() && isValidSyntax) {
             // Set the current lexer symbol to the top of the symbol stack
             setTopOfLexerStack(getLexicalAnalyzer().getSymbolStack().peek());
 
             // Get the top of parse stack
             setTopOfParseStack(getParseStack().peek());
 
-            getTopOfParseStack().doTheThing(this);
+            try {
+                getTopOfParseStack().doTheThing(this);
+            } catch (SyntaxErrorException e) {
+                isValidSyntax = false;
+            }
         }
 
-        isValidSyntax = true;
+        if (getLexicalAnalyzer().hasNextLexeme()) {
+            isValidSyntax = false;
+        }
 
         return isValidSyntax;
     }
@@ -235,6 +241,8 @@ public class Parser {
                     add(Token.STATEMENT);
                     add(Token.SEPARATED_LIST);
                 }});
+
+                put(Token.END, new LinkedList<>());
             }});
 
             put(Token.PRINT_EXPRESSION, new HashMap<>() {{

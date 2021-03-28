@@ -1,2 +1,0 @@
-variable u;
-variable v;

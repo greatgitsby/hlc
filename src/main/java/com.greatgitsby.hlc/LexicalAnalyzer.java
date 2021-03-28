@@ -326,7 +326,8 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                     // an unknown symbol, so we can infer it to be a
                     // new identifier
                     if (currentState == State.SYMBOL) {
-                        theSymbol = new Lexeme(lexeme, Token.IDENTIFIER);
+//                        theSymbol = new Lexeme(lexeme, Token.IDENTIFIER);
+                        theSymbol = Token.IDENTIFIER;
                     }
                     // It's whitespace if we were in the WHITESPACE state
                     else if (currentState == State.WHITESPACE) {
@@ -339,11 +340,13 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                     // It's a STRING_CONST if we were in the STRING_CONST
                     // state
                     else if (currentState == State.STRING_CONST) {
-                        theSymbol = new Lexeme(lexeme, Token.STRING_CONST);
+//                        theSymbol = new Lexeme(lexeme, Token.STRING_CONST);
+                        theSymbol = Token.STRING_CONST;
                     }
                     // It's a NUMBER if we were in the NUMBER state
                     else if (currentState == State.NUMBER) {
-                        theSymbol = new Lexeme(lexeme, Token.NUMBER);
+//                        theSymbol = new Lexeme(lexeme, Token.NUMBER);
+                        theSymbol = Token.NUMBER;
                     }
 
                     // Insert the new symbol into the symbol table

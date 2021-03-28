@@ -12,5 +12,5 @@ public interface Symbol {
     /**
      * Do that thing!
      */
-    void doTheThing(Parser theParser);
+    void doTheThing(Parser theParser) throws SyntaxErrorException;
 }

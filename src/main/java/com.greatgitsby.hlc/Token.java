@@ -1,5 +1,8 @@
 package com.greatgitsby.hlc;
 
+import java.util.List;
+import java.util.ListIterator;
+
 /**
  * Token
  *
@@ -34,73 +37,73 @@ public enum Token implements Symbol {
     // Non-terminals
     STATEMENT {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     ELSE_CLAUSE {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     STATEMENT_LIST {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     SEPARATED_LIST {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     PRINT_EXPRESSION {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     BOOLEAN_EXPRESSION {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     EXPRESSION {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     ADDITION {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     TERM {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     MULTIPLICATION {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     FACTOR {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     },
     SIGNED_TERM {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
             doTheNonTerminalThing(theParser);
         }
     };
@@ -108,26 +111,29 @@ public enum Token implements Symbol {
     /**
      * General behavior of non-terminals
      */
-    protected void doTheNonTerminalThing(Parser theParser) {
+    protected void doTheNonTerminalThing(Parser theParser) throws SyntaxErrorException {
+        ListIterator<Symbol> listIterator;
+        List<Symbol> theListOfSymbols;
+
+        theParser.getParseStack().pop();
+
         if (
             theParser.getParseTable().containsKey(theParser.getTopOfParseStack()) &&
             theParser.getParseTable().get(theParser.getTopOfParseStack()).containsKey(
                 theParser.getTopOfLexerStack()
             )
         ) {
-            theParser.getParseStack().pop();
+            theListOfSymbols = theParser.getParseTable()
+                .get(theParser.getTopOfParseStack())
+                .get(theParser.getTopOfLexerStack());
 
-            for (
-                Symbol s :
-                theParser.getParseTable()
-                    .get(theParser.getTopOfParseStack())
-                    .get(theParser.getTopOfLexerStack())
-            ) {
-                theParser.getParseStack().push(s);
+            listIterator = theListOfSymbols.listIterator(theListOfSymbols.size());
+
+            while (listIterator.hasPrevious()) {
+                theParser.getParseStack().push(listIterator.previous());
             }
         } else {
-            //                throw new SyntaxErrorException("Invalid Syntax");
-            System.err.println("ERROR!!!");
+//            throw new SyntaxErrorException("Invalid Syntax");
         }
     }
 
@@ -135,7 +141,7 @@ public enum Token implements Symbol {
      * General behavior for terminals
      */
     @Override
-    public void doTheThing(Parser theParser) {
+    public void doTheThing(Parser theParser) throws SyntaxErrorException {
         // TODO Implement general behavior
 
         theParser.getLexicalAnalyzer().getSymbolStack().pop();

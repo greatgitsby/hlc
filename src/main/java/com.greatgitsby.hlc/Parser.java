@@ -149,13 +149,15 @@ public class Parser {
         return new HashMap<>() {{
             put(Token.STATEMENT, new HashMap<>() {{
 
-                put(Token.IDENTIFIER, new LinkedList<>() {{
+                // statement -> identifier assignment_operator expression
+                put(Token.IDENTIFIER, new ArrayList<>() {{
                     add(Token.IDENTIFIER);
                     add(Token.ASSIGNMENT_OP);
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.IF, new LinkedList<>() {{
+                // statement -> if boolean_expression then statement else_clause
+                put(Token.IF, new ArrayList<>() {{
                     add(Token.IF);
                     add(Token.BOOLEAN_EXPRESSION);
                     add(Token.THEN);
@@ -163,329 +165,479 @@ public class Parser {
                     add(Token.ELSE_CLAUSE);
                 }});
 
-                put(Token.WHILE, new LinkedList<>() {{
+                // statement -> while boolean_expression do statement
+                put(Token.WHILE, new ArrayList<>() {{
                     add(Token.WHILE);
                     add(Token.BOOLEAN_EXPRESSION);
                     add(Token.DO);
                     add(Token.STATEMENT);
                 }});
 
-                put(Token.PRINT, new LinkedList<>() {{
+                // statement -> print print_expression
+                put(Token.PRINT, new ArrayList<>() {{
                     add(Token.PRINT);
                     add(Token.PRINT_EXPRESSION);
                 }});
 
-                put(Token.BEGIN, new LinkedList<>() {{
+                // statement -> begin statement_list end
+                put(Token.BEGIN, new ArrayList<>() {{
                     add(Token.BEGIN);
                     add(Token.STATEMENT_LIST);
                     add(Token.END);
                 }});
 
-                put(Token.VARIABLE, new LinkedList<>() {{
+                // statement -> variable identifier
+                put(Token.VARIABLE, new ArrayList<>() {{
                     add(Token.VARIABLE);
                     add(Token.IDENTIFIER);
                 }});
 
-                put(Token.ELSE, new LinkedList<>());
+                // else is in follow(statement), won't push anything new
+                put(Token.ELSE, new ArrayList<>());
 
-                put(Token.STATEMENT_SEP, new LinkedList<>());
+                // statement_sep is in follow(statement),
+                // won't push anything new
+                put(Token.STATEMENT_SEP, new ArrayList<>());
 
-                put(Token.END_OF_INPUT, new LinkedList<>());
+                // end_of_input is in follow(statement),
+                // won't push anything new
+                put(Token.END_OF_INPUT, new ArrayList<>());
 
-                put(Token.END, new LinkedList<>());
+                // end is in follow(statement), won't push anything new
+                put(Token.END, new ArrayList<>());
             }});
 
             put(Token.ELSE_CLAUSE, new HashMap<>() {{
 
-                put(Token.ELSE, new LinkedList<>() {{
+                // else_clause -> else statement
+                put(Token.ELSE, new ArrayList<>() {{
                     add(Token.ELSE);
                     add(Token.STATEMENT);
                 }});
 
-                put(Token.STATEMENT_SEP, new LinkedList<>());
+                // statement_sep is in follow(else_clause),
+                // won't push anything new
+                put(Token.STATEMENT_SEP, new ArrayList<>());
 
-                put(Token.END_OF_INPUT, new LinkedList<>());
+                // end_of_input is in follow(else_clause),
+                // won't push anything new
+                put(Token.END_OF_INPUT, new ArrayList<>());
 
-                put(Token.END, new LinkedList<>());
+                // end is in follow(else_clause),
+                // won't push anything new
+                put(Token.END, new ArrayList<>());
+
+                // else is in follow(else_clause),
+                // won't push anything new
+//                put(Token.ELSE, new ArrayList<>()); // ??????????????????????????????????????????????????????????????????????????????????????
             }});
 
             put(Token.STATEMENT_LIST, new HashMap<>() {{
 
-                put(Token.IDENTIFIER, new LinkedList<>() {{
+                // statement_list -> statement sep_list
+                put(Token.IDENTIFIER, new ArrayList<>() {{
                     add(Token.STATEMENT);
                     add(Token.SEPARATED_LIST);
                 }});
 
-                put(Token.IF, new LinkedList<>() {{
+                // statement_list -> statement sep_list
+                put(Token.IF, new ArrayList<>() {{
                     add(Token.STATEMENT);
                     add(Token.SEPARATED_LIST);
                 }});
 
-                put(Token.WHILE, new LinkedList<>() {{
+                // statement_list -> statement sep_list
+                put(Token.WHILE, new ArrayList<>() {{
                     add(Token.STATEMENT);
                     add(Token.SEPARATED_LIST);
                 }});
 
-                put(Token.PRINT, new LinkedList<>() {{
+                // statement_list -> statement sep_list
+                put(Token.PRINT, new ArrayList<>() {{
                     add(Token.STATEMENT);
                     add(Token.SEPARATED_LIST);
                 }});
 
-                put(Token.BEGIN, new LinkedList<>() {{
+                // statement_list -> statement sep_list
+                put(Token.BEGIN, new ArrayList<>() {{
                     add(Token.STATEMENT);
                     add(Token.SEPARATED_LIST);
                 }});
 
-                put(Token.VARIABLE, new LinkedList<>() {{
+                // statement_list -> statement sep_list
+                put(Token.VARIABLE, new ArrayList<>() {{
                     add(Token.STATEMENT);
                     add(Token.SEPARATED_LIST);
                 }});
 
-                put(Token.END, new LinkedList<>());
+                // end is in follow(statement), won't push anything new
+                put(Token.END, new ArrayList<>());
             }});
 
             put(Token.SEPARATED_LIST, new HashMap<>() {{
 
-                put(Token.STATEMENT_SEP, new LinkedList<>() {{
+                // sep_list -> statement_sep statement sep_list
+                put(Token.STATEMENT_SEP, new ArrayList<>() {{
                     add(Token.STATEMENT_SEP);
                     add(Token.STATEMENT);
                     add(Token.SEPARATED_LIST);
                 }});
 
-                put(Token.END, new LinkedList<>());
+                // end is in follow(sep_list), won't push anything new
+                put(Token.END, new ArrayList<>());
             }});
 
             put(Token.PRINT_EXPRESSION, new HashMap<>() {{
 
-                put(Token.IDENTIFIER, new LinkedList<>() {{
+                // print_expression -> expression
+                put(Token.IDENTIFIER, new ArrayList<>() {{
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.LEFT_PAREN, new LinkedList<>() {{
+                // print_expression -> expression
+                put(Token.LEFT_PAREN, new ArrayList<>() {{
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.NUMBER, new LinkedList<>() {{
+                // print_expression -> expression
+                put(Token.NUMBER, new ArrayList<>() {{
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.ADDITIVE_OP, new LinkedList<>() {{
+                // print_expression -> expression
+                put(Token.ADDITIVE_OP, new ArrayList<>() {{
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.STRING_CONST, new LinkedList<>() {{
+                // print_expression -> string_const
+                put(Token.STRING_CONST, new ArrayList<>() {{
                     add(Token.STRING_CONST);
                 }});
 
-                put(Token.END_OF_INPUT, new LinkedList<>());
+                // statement_sep is in follow(sep_list),
+                // won't push anything new
+                put(Token.STATEMENT_SEP, new ArrayList<>());
 
-                put(Token.ELSE, new LinkedList<>());
+                // end_of_input is in follow(sep_list),
+                // won't push anything new
+                put(Token.END_OF_INPUT, new ArrayList<>());
 
-                put(Token.IF, new LinkedList<>());
+                // else is in follow(sep_list), won't push anything new
+                put(Token.ELSE, new ArrayList<>());
 
-                put(Token.WHILE, new LinkedList<>());
-
-                put(Token.PRINT, new LinkedList<>());
-
-                put(Token.BEGIN, new LinkedList<>());
-
-                put(Token.VARIABLE, new LinkedList<>());
-
-                put(Token.STATEMENT_SEP, new LinkedList<>());
+                // end is in follow(sep_list), won't push anything new
+                put(Token.END, new ArrayList<>());
             }});
 
             put(Token.BOOLEAN_EXPRESSION, new HashMap<>() {{
 
-                put(Token.IDENTIFIER, new LinkedList<>() {{
+                // boolean_expression -> expression relational_op expression
+                put(Token.IDENTIFIER, new ArrayList<>() {{
                     add(Token.EXPRESSION);
                     add(Token.RELATIONAL_OP);
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.LEFT_PAREN, new LinkedList<>() {{
+                // boolean_expression -> expression relational_op expression
+                put(Token.LEFT_PAREN, new ArrayList<>() {{
                     add(Token.EXPRESSION);
                     add(Token.RELATIONAL_OP);
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.NUMBER, new LinkedList<>() {{
+                // boolean_expression -> expression relational_op expression
+                put(Token.NUMBER, new ArrayList<>() {{
                     add(Token.EXPRESSION);
                     add(Token.RELATIONAL_OP);
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.ADDITIVE_OP, new LinkedList<>() {{
+                // boolean_expression -> expression relational_op expression
+                put(Token.ADDITIVE_OP, new ArrayList<>() {{
                     add(Token.EXPRESSION);
                     add(Token.RELATIONAL_OP);
                     add(Token.EXPRESSION);
                 }});
 
-                put(Token.THEN, new LinkedList<>());
+                // then is in follow(boolean_expression),
+                // won't push anything new
+                put(Token.THEN, new ArrayList<>());
 
-                put(Token.DO, new LinkedList<>());
+                // do is in follow(boolean_expression),
+                // won't push anything new
+                put(Token.DO, new ArrayList<>());
             }});
 
             put(Token.EXPRESSION, new HashMap<>() {{
 
-                put(Token.IDENTIFIER, new LinkedList<>() {{
+                // expression -> term addition
+                put(Token.IDENTIFIER, new ArrayList<>() {{
                     add(Token.TERM);
                     add(Token.ADDITION);
                 }});
 
-                put(Token.LEFT_PAREN, new LinkedList<>() {{
+                // expression -> term addition
+                put(Token.LEFT_PAREN, new ArrayList<>() {{
                     add(Token.TERM);
                     add(Token.ADDITION);
                 }});
 
-                put(Token.NUMBER, new LinkedList<>() {{
+                // expression -> term addition
+                put(Token.NUMBER, new ArrayList<>() {{
                     add(Token.TERM);
                     add(Token.ADDITION);
                 }});
 
-                put(Token.ADDITIVE_OP, new LinkedList<>() {{
+                // expression -> term addition
+                put(Token.ADDITIVE_OP, new ArrayList<>() {{
                     add(Token.TERM);
                     add(Token.ADDITION);
                 }});
 
-                put(Token.END_OF_INPUT, new LinkedList<>());
+                // end_of_input is in follow(expression),
+                // won't push anything new
+                put(Token.END_OF_INPUT, new ArrayList<>());
 
-                put(Token.ELSE, new LinkedList<>());
+                // else is in follow(expression),
+                // won't push anything new
+                put(Token.ELSE, new ArrayList<>());
 
-                put(Token.IF, new LinkedList<>());
+                // do is in follow(expression),
+                // won't push anything new
+                put(Token.DO, new ArrayList<>());
 
-                put(Token.WHILE, new LinkedList<>());
+                // end is in follow(expression),
+                // won't push anything new
+                put(Token.END, new ArrayList<>());
 
-                put(Token.PRINT, new LinkedList<>());
+                // statement_sep is in follow(expression),
+                // won't push anything new
+                put(Token.STATEMENT_SEP, new ArrayList<>());
 
-                put(Token.BEGIN, new LinkedList<>());
+                // relational_op is in follow(expression),
+                // won't push anything new
+                put(Token.RELATIONAL_OP, new ArrayList<>());
 
-                put(Token.VARIABLE, new LinkedList<>());
+                // then is in follow(expression),
+                // won't push anything new
+                put(Token.THEN, new ArrayList<>());
 
-                put(Token.STATEMENT_SEP, new LinkedList<>());
-
-                put(Token.RELATIONAL_OP, new LinkedList<>());
-
-                put(Token.THEN, new LinkedList<>());
-
-                put(Token.RIGHT_PAREN, new LinkedList<>());
+                // right_paren is in follow(expression),
+                // won't push anything new
+                put(Token.RIGHT_PAREN, new ArrayList<>());
             }});
 
             put(Token.ADDITION, new HashMap<>() {{
 
-                put(Token.ADDITIVE_OP, new LinkedList<>() {{
+                // addition -> additive_op term addition
+                put(Token.ADDITIVE_OP, new ArrayList<>() {{
                     add(Token.ADDITIVE_OP);
                     add(Token.TERM);
                     add(Token.ADDITION);
                 }});
 
-                put(Token.ELSE, new LinkedList<>());
+                // end_of_input is in follow(addition),
+                // won't push anything new
+                put(Token.END_OF_INPUT, new ArrayList<>());
 
-                put(Token.STATEMENT_SEP, new LinkedList<>());
+                // else is in follow(addition),
+                // won't push anything new
+                put(Token.ELSE, new ArrayList<>());
 
-                put(Token.END_OF_INPUT, new LinkedList<>());
+                // do is in follow(addition),
+                // won't push anything new
+                put(Token.DO, new ArrayList<>());
 
-                put(Token.END, new LinkedList<>());
+                // end is in follow(addition),
+                // won't push anything new
+                put(Token.END, new ArrayList<>());
 
-                put(Token.THEN, new LinkedList<>());
+                // statement_sep is in follow(addition),
+                // won't push anything new
+                put(Token.STATEMENT_SEP, new ArrayList<>());
 
-                put(Token.DO, new LinkedList<>());
+                // relational_op is in follow(addition),
+                // won't push anything new
+                put(Token.RELATIONAL_OP, new ArrayList<>());
 
-                put(Token.RELATIONAL_OP, new LinkedList<>());
+                // then is in follow(addition),
+                // won't push anything new
+                put(Token.THEN, new ArrayList<>());
+
+                // right_paren is in follow(addition),
+                // won't push anything new
+                put(Token.RIGHT_PAREN, new ArrayList<>());
             }});
 
             put(Token.TERM, new HashMap<>() {{
 
-                put(Token.IDENTIFIER, new LinkedList<>() {{
+                // term -> factor multiplication
+                put(Token.IDENTIFIER, new ArrayList<>() {{
                     add(Token.FACTOR);
                     add(Token.MULTIPLICATION);
                 }});
 
-                put(Token.LEFT_PAREN, new LinkedList<>() {{
+                // term -> factor multiplication
+                put(Token.LEFT_PAREN, new ArrayList<>() {{
                     add(Token.FACTOR);
                     add(Token.MULTIPLICATION);
                 }});
 
-                put(Token.NUMBER, new LinkedList<>() {{
+                // term -> factor multiplication
+                put(Token.NUMBER, new ArrayList<>() {{
                     add(Token.FACTOR);
                     add(Token.MULTIPLICATION);
                 }});
 
-                put(Token.ADDITIVE_OP, new LinkedList<>() {{
+                // term -> factor multiplication
+                put(Token.ADDITIVE_OP, new ArrayList<>() {{
                     add(Token.FACTOR);
                     add(Token.MULTIPLICATION);
                 }});
 
-                put(Token.ELSE, new LinkedList<>());
+                // end_of_input is in follow(term),
+                // won't push anything new
+                put(Token.END_OF_INPUT, new ArrayList<>());
 
-                put(Token.STATEMENT_SEP, new LinkedList<>());
+                // else is in follow(term),
+                // won't push anything new
+                put(Token.ELSE, new ArrayList<>());
 
-                put(Token.END_OF_INPUT, new LinkedList<>());
+                // do is in follow(term),
+                // won't push anything new
+                put(Token.DO, new ArrayList<>());
 
-                put(Token.END, new LinkedList<>());
+                // end is in follow(term),
+                // won't push anything new
+                put(Token.END, new ArrayList<>());
 
-                put(Token.THEN, new LinkedList<>());
+                // statement_sep is in follow(term),
+                // won't push anything new
+                put(Token.STATEMENT_SEP, new ArrayList<>());
 
-                put(Token.DO, new LinkedList<>());
+                // relational_op is in follow(term),
+                // won't push anything new
+                put(Token.RELATIONAL_OP, new ArrayList<>());
 
-                put(Token.RELATIONAL_OP, new LinkedList<>());
+                // then is in follow(term),
+                // won't push anything new
+                put(Token.THEN, new ArrayList<>());
+
+                // right_paren is in follow(term),
+                // won't push anything new
+                put(Token.RIGHT_PAREN, new ArrayList<>());
             }});
 
             put(Token.MULTIPLICATION, new HashMap<>() {{
 
-                put(Token.MULTIPLICATIVE_OP, new LinkedList<>() {{
+                // multiplication -> multiplicative_op factor multiplication
+                put(Token.MULTIPLICATIVE_OP, new ArrayList<>() {{
                     add(Token.MULTIPLICATIVE_OP);
                     add(Token.FACTOR);
                     add(Token.MULTIPLICATION);
                 }});
 
-                put(Token.ADDITIVE_OP, new LinkedList<>());
+                // end_of_input is in follow(multiplication),
+                // won't push anything new
+                put(Token.END_OF_INPUT, new ArrayList<>());
 
-                put(Token.STATEMENT_SEP, new LinkedList<>()); // ????????
+                // else is in follow(multiplication),
+                // won't push anything new
+                put(Token.ELSE, new ArrayList<>());
 
-                put(Token.RIGHT_PAREN, new LinkedList<>()); // ??????????
+                // do is in follow(multiplication),
+                // won't push anything new
+                put(Token.DO, new ArrayList<>());
 
+                // end is in follow(multiplication),
+                // won't push anything new
+                put(Token.END, new ArrayList<>());
+
+                // statement_sep is in follow(multiplication),
+                // won't push anything new
+                put(Token.STATEMENT_SEP, new ArrayList<>());
+
+                // relational_op is in follow(multiplication),
+                // won't push anything new
+                put(Token.RELATIONAL_OP, new ArrayList<>());
+
+                // then is in follow(multiplication),
+                // won't push anything new
+                put(Token.THEN, new ArrayList<>());
+
+                // right_paren is in follow(multiplication),
+                // won't push anything new
+                put(Token.RIGHT_PAREN, new ArrayList<>());
+
+                // add_op is in follow(multiplication),
+                // won't push anything new
+                put(Token.ADDITIVE_OP, new ArrayList<>()); // ?????
             }});
 
             put(Token.FACTOR, new HashMap<>() {{
 
-                put(Token.IDENTIFIER, new LinkedList<>() {{
+                // factor -> identifier
+                put(Token.IDENTIFIER, new ArrayList<>() {{
                     add(Token.IDENTIFIER);
                 }});
 
-                put(Token.LEFT_PAREN, new LinkedList<>() {{
+                // factor -> left_paren expression right_paren
+                put(Token.LEFT_PAREN, new ArrayList<>() {{
                     add(Token.LEFT_PAREN);
                     add(Token.EXPRESSION);
                     add(Token.RIGHT_PAREN);
                 }});
 
-                put(Token.NUMBER, new LinkedList<>() {{
+                // factor -> number
+                put(Token.NUMBER, new ArrayList<>() {{
                     add(Token.NUMBER);
                 }});
 
-                put(Token.ADDITIVE_OP, new LinkedList<>() {{
+                // factor -> signed_term
+                put(Token.ADDITIVE_OP, new ArrayList<>() {{
                     add(Token.SIGNED_TERM);
                 }});
 
-                put(Token.ELSE, new LinkedList<>());
+                // end_of_input is in follow(factor),
+                // won't push anything new
+                put(Token.END_OF_INPUT, new ArrayList<>());
 
-                put(Token.STATEMENT_SEP, new LinkedList<>());
+                // else is in follow(factor),
+                // won't push anything new
+                put(Token.ELSE, new ArrayList<>());
 
-                put(Token.END_OF_INPUT, new LinkedList<>());
+                // do is in follow(factor),
+                // won't push anything new
+                put(Token.DO, new ArrayList<>());
 
-                put(Token.END, new LinkedList<>());
+                // end is in follow(factor),
+                // won't push anything new
+                put(Token.END, new ArrayList<>());
 
-                put(Token.THEN, new LinkedList<>());
+                // statement_sep is in follow(factor),
+                // won't push anything new
+                put(Token.STATEMENT_SEP, new ArrayList<>());
 
-                put(Token.DO, new LinkedList<>());
+                // relational_op is in follow(factor),
+                // won't push anything new
+                put(Token.RELATIONAL_OP, new ArrayList<>());
 
-                put(Token.RELATIONAL_OP, new LinkedList<>());
+                // then is in follow(factor),
+                // won't push anything new
+                put(Token.THEN, new ArrayList<>());
 
-                put(Token.MULTIPLICATIVE_OP, new LinkedList<>());
+                // right_paren is in follow(factor),
+                // won't push anything new
+                put(Token.RIGHT_PAREN, new ArrayList<>());
+
+                // multiplicative_op is in follow(factor),
+                // won't push anything new
+                put(Token.MULTIPLICATIVE_OP, new ArrayList<>());
             }});
 
             put(Token.SIGNED_TERM, new HashMap<>() {{
 
-                put(Token.ADDITIVE_OP, new LinkedList<>() {{
+                put(Token.ADDITIVE_OP, new ArrayList<>() {{
                     add(Token.ADDITIVE_OP);
                     add(Token.TERM);
                 }});

@@ -51,14 +51,18 @@ public class Parser {
             // Get the top of parse stack
             setTopOfParseStack(getParseStack().peek());
 
+            // Tell the symbol on the top of the parse stack to
+            // do its thing. If it does not succeed, it is due to a syntax
+            // error. Print where the error occurred
             try {
                 getTopOfParseStack().doTheThing(this);
             } catch (SyntaxErrorException e) {
+                e.printStackTrace();
                 isValidSyntax = false;
             }
         }
 
-        if (getLexicalAnalyzer().hasNextLexeme()) {
+        if (!getLexicalAnalyzer().getSymbolStack().isEmpty()) {
             isValidSyntax = false;
         }
 
@@ -182,13 +186,13 @@ public class Parser {
                     add(Token.IDENTIFIER);
                 }});
 
-//                put(Token.ELSE, new LinkedList<>());
-//
-//                put(Token.STATEMENT_SEP, new LinkedList<>());
-//
-//                put(Token.END_OF_INPUT, new LinkedList<>());
-//
-//                put(Token.END, new LinkedList<>());
+                put(Token.ELSE, new LinkedList<>());
+
+                put(Token.STATEMENT_SEP, new LinkedList<>());
+
+                put(Token.END_OF_INPUT, new LinkedList<>());
+
+                put(Token.END, new LinkedList<>());
             }});
 
             put(Token.ELSE_CLAUSE, new HashMap<>() {{
@@ -197,6 +201,12 @@ public class Parser {
                     add(Token.ELSE);
                     add(Token.STATEMENT);
                 }});
+
+                put(Token.STATEMENT_SEP, new LinkedList<>());
+
+                put(Token.END_OF_INPUT, new LinkedList<>());
+
+                put(Token.END, new LinkedList<>());
             }});
 
             put(Token.STATEMENT_LIST, new HashMap<>() {{
@@ -266,6 +276,22 @@ public class Parser {
                 put(Token.STRING_CONST, new LinkedList<>() {{
                     add(Token.STRING_CONST);
                 }});
+
+                put(Token.END_OF_INPUT, new LinkedList<>());
+
+                put(Token.ELSE, new LinkedList<>());
+
+                put(Token.IF, new LinkedList<>());
+
+                put(Token.WHILE, new LinkedList<>());
+
+                put(Token.PRINT, new LinkedList<>());
+
+                put(Token.BEGIN, new LinkedList<>());
+
+                put(Token.VARIABLE, new LinkedList<>());
+
+                put(Token.STATEMENT_SEP, new LinkedList<>());
             }});
 
             put(Token.BOOLEAN_EXPRESSION, new HashMap<>() {{
@@ -293,6 +319,10 @@ public class Parser {
                     add(Token.RELATIONAL_OP);
                     add(Token.EXPRESSION);
                 }});
+
+                put(Token.THEN, new LinkedList<>());
+
+                put(Token.DO, new LinkedList<>());
             }});
 
             put(Token.EXPRESSION, new HashMap<>() {{
@@ -316,6 +346,28 @@ public class Parser {
                     add(Token.TERM);
                     add(Token.ADDITION);
                 }});
+
+                put(Token.END_OF_INPUT, new LinkedList<>());
+
+                put(Token.ELSE, new LinkedList<>());
+
+                put(Token.IF, new LinkedList<>());
+
+                put(Token.WHILE, new LinkedList<>());
+
+                put(Token.PRINT, new LinkedList<>());
+
+                put(Token.BEGIN, new LinkedList<>());
+
+                put(Token.VARIABLE, new LinkedList<>());
+
+                put(Token.STATEMENT_SEP, new LinkedList<>());
+
+                put(Token.RELATIONAL_OP, new LinkedList<>());
+
+                put(Token.THEN, new LinkedList<>());
+
+                put(Token.RIGHT_PAREN, new LinkedList<>());
             }});
 
             put(Token.ADDITION, new HashMap<>() {{
@@ -325,6 +377,20 @@ public class Parser {
                     add(Token.TERM);
                     add(Token.ADDITION);
                 }});
+
+                put(Token.ELSE, new LinkedList<>());
+
+                put(Token.STATEMENT_SEP, new LinkedList<>());
+
+                put(Token.END_OF_INPUT, new LinkedList<>());
+
+                put(Token.END, new LinkedList<>());
+
+                put(Token.THEN, new LinkedList<>());
+
+                put(Token.DO, new LinkedList<>());
+
+                put(Token.RELATIONAL_OP, new LinkedList<>());
             }});
 
             put(Token.TERM, new HashMap<>() {{
@@ -348,6 +414,20 @@ public class Parser {
                     add(Token.FACTOR);
                     add(Token.MULTIPLICATION);
                 }});
+
+                put(Token.ELSE, new LinkedList<>());
+
+                put(Token.STATEMENT_SEP, new LinkedList<>());
+
+                put(Token.END_OF_INPUT, new LinkedList<>());
+
+                put(Token.END, new LinkedList<>());
+
+                put(Token.THEN, new LinkedList<>());
+
+                put(Token.DO, new LinkedList<>());
+
+                put(Token.RELATIONAL_OP, new LinkedList<>());
             }});
 
             put(Token.MULTIPLICATION, new HashMap<>() {{
@@ -357,6 +437,13 @@ public class Parser {
                     add(Token.FACTOR);
                     add(Token.MULTIPLICATION);
                 }});
+
+                put(Token.ADDITIVE_OP, new LinkedList<>());
+
+                put(Token.STATEMENT_SEP, new LinkedList<>()); // ????????
+
+                put(Token.RIGHT_PAREN, new LinkedList<>()); // ??????????
+
             }});
 
             put(Token.FACTOR, new HashMap<>() {{
@@ -378,6 +465,22 @@ public class Parser {
                 put(Token.ADDITIVE_OP, new LinkedList<>() {{
                     add(Token.SIGNED_TERM);
                 }});
+
+                put(Token.ELSE, new LinkedList<>());
+
+                put(Token.STATEMENT_SEP, new LinkedList<>());
+
+                put(Token.END_OF_INPUT, new LinkedList<>());
+
+                put(Token.END, new LinkedList<>());
+
+                put(Token.THEN, new LinkedList<>());
+
+                put(Token.DO, new LinkedList<>());
+
+                put(Token.RELATIONAL_OP, new LinkedList<>());
+
+                put(Token.MULTIPLICATIVE_OP, new LinkedList<>());
             }});
 
             put(Token.SIGNED_TERM, new HashMap<>() {{

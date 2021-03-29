@@ -263,13 +263,10 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                 normalizedChar = LETTER;
             }
 
-            // Handle the IN_COMMENT and IN_STRING states, consume all
-            // characters until we hit either of the characters that
-            // signal the end of a comment or a string const
-            if (
-                currentState == State.IN_COMMENT ||
-                currentState == State.IN_STRING
-            ) {
+            // Handle the IN_COMMENT state, consume all
+            // characters until we hit the character that
+            // signals the end of a comment
+            if (currentState == State.IN_COMMENT) {
                 // Add the incoming character to the lexeme
                 lexemeValue.append(Character.toString(theChar));
                 charNumber++;
@@ -279,6 +276,13 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                 if (normalizedChar == END_COMMENT) {
                     currentState = State.COMMENT;
                 }
+            // Handle the IN_STRING state, consume all
+            // characters until we hit the character that
+            // signals the end of a string const
+            } else if (currentState == State.IN_STRING) {
+                // Add the incoming character to the lexeme
+                lexemeValue.append(Character.toString(theChar));
+                charNumber++;
 
                 // If we have hit the END_STRING_CONST character,
                 // it is time to move to the STRING_CONST state

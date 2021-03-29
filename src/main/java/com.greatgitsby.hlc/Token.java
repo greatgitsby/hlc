@@ -133,7 +133,7 @@ public enum Token implements Symbol {
                 theParser.getParseStack().push(listIterator.previous());
             }
         } else {
-//            throw new SyntaxErrorException("Invalid Syntax");
+            throw new SyntaxErrorException("Unexpected Non-Terminal");
         }
     }
 
@@ -144,7 +144,11 @@ public enum Token implements Symbol {
     public void doTheThing(Parser theParser) throws SyntaxErrorException {
         // TODO Implement general behavior
 
-        theParser.getLexicalAnalyzer().getSymbolStack().pop();
-        theParser.getParseStack().pop();
+        if (theParser.getTopOfParseStack().equals(theParser.getTopOfLexerStack())) {
+            theParser.getLexicalAnalyzer().getSymbolStack().pop();
+            theParser.getParseStack().pop();
+        } else {
+            throw new SyntaxErrorException("Unexpected Terminal");
+        }
     }
 }

@@ -7,7 +7,7 @@ begin
     variable p0;
     variable p1;
     variable p2;
-    variable t;
+    variable t
 
     { Temporaries }
     variable a1;

@@ -54,12 +54,7 @@ public class Parser {
             // Tell the symbol on the top of the parse stack to
             // do its thing. If it does not succeed, it is due to a syntax
             // error. Print where the error occurred
-            try {
-                getTopOfParseStack().doTheThing(this);
-            } catch (SyntaxErrorException e) {
-                e.printStackTrace();
-                isValidSyntax = false;
-            }
+            getTopOfParseStack().doTheThing(this);
         }
 
         if (!getLexicalAnalyzer().getSymbolStack().isEmpty()) {
@@ -226,10 +221,6 @@ public class Parser {
                 // end is in follow(else_clause),
                 // won't push anything new
                 put(Token.END, new ArrayList<>());
-
-                // else is in follow(else_clause),
-                // won't push anything new
-//                put(Token.ELSE, new ArrayList<>()); // ??????????????????????????????????????????????????????????????????????????????????????
             }});
 
             put(Token.STATEMENT_LIST, new HashMap<>() {{
@@ -526,6 +517,10 @@ public class Parser {
                 // right_paren is in follow(term),
                 // won't push anything new
                 put(Token.RIGHT_PAREN, new ArrayList<>());
+
+                // multiplicative_op is in follow(term),
+                // won't push anything new
+                put(Token.MULTIPLICATIVE_OP, new ArrayList<>());
             }});
 
             put(Token.MULTIPLICATION, new HashMap<>() {{
@@ -571,7 +566,7 @@ public class Parser {
 
                 // add_op is in follow(multiplication),
                 // won't push anything new
-                put(Token.ADDITIVE_OP, new ArrayList<>()); // ?????
+                put(Token.ADDITIVE_OP, new ArrayList<>());
             }});
 
             put(Token.FACTOR, new HashMap<>() {{

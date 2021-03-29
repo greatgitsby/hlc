@@ -217,6 +217,8 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
         Symbol theSymbol;
         int lineNumber;
         int charNumber;
+        int lexemeStartLineNumber;
+        int lexemeStartCharNumber;
         int theChar;
         char normalizedChar;
 
@@ -224,6 +226,8 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
 
         // Initialize lexeme
         lexemeValue = new StringBuilder();
+        lexemeStartLineNumber = 0;
+        lexemeStartCharNumber = 0;
 
         // Move state machine to START state
         currentState = State.START;
@@ -267,6 +271,14 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
             // characters until we hit the character that
             // signals the end of a comment
             if (currentState == State.IN_COMMENT) {
+                // If this is the start of a new lexeme, then
+                // mark the starting line and char numbers of this
+                // lexeme
+                if (lexemeValue.isEmpty()) {
+                    lexemeStartCharNumber = charNumber;
+                    lexemeStartLineNumber = lineNumber;
+                }
+
                 // Add the incoming character to the lexeme
                 lexemeValue.append(Character.toString(theChar));
                 charNumber++;
@@ -280,6 +292,14 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
             // characters until we hit the character that
             // signals the end of a string const
             } else if (currentState == State.IN_STRING) {
+                // If this is the start of a new lexeme, then
+                // mark the starting line and char numbers of this
+                // lexeme
+                if (lexemeValue.isEmpty()) {
+                    lexemeStartCharNumber = charNumber;
+                    lexemeStartLineNumber = lineNumber;
+                }
+
                 // Add the incoming character to the lexeme
                 lexemeValue.append(Character.toString(theChar));
                 charNumber++;
@@ -302,6 +322,14 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                 currentState = getStateTable()
                     .get(currentState)
                     .get(normalizedChar);
+
+                // If this is the start of a new lexeme, then
+                // mark the starting line and char numbers of this
+                // lexeme
+                if (lexemeValue.isEmpty()) {
+                    lexemeStartCharNumber = charNumber;
+                    lexemeStartLineNumber = lineNumber;
+                }
 
                 // Add the character to the lexeme
                 lexemeValue.append(Character.toString(theChar));
@@ -330,31 +358,43 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                     // an unknown symbol, so we can infer it to be a
                     // new identifier
                     if (currentState == State.SYMBOL) {
-//                        theSymbol = new Lexeme(lexeme, Token.IDENTIFIER);
-                        theSymbol = Token.IDENTIFIER;
+                        theSymbol = new Lexeme(
+                            lexeme,
+                            Token.IDENTIFIER
+                        );
                     }
                     // It's whitespace if we were in the WHITESPACE state
                     else if (currentState == State.WHITESPACE) {
-                        theSymbol = new Lexeme(lexeme, Token.WHITESPACE);
+                        theSymbol = new Lexeme(
+                            lexeme,
+                            Token.WHITESPACE
+                        );
                     }
                     // It's a comment if we were in the COMMENT state
                     else if (currentState == State.COMMENT) {
-                        theSymbol = new Lexeme(lexeme, Token.COMMENT);
+                        theSymbol = new Lexeme(
+                            lexeme,
+                            Token.COMMENT
+                        );
                     }
                     // It's a STRING_CONST if we were in the STRING_CONST
                     // state
                     else if (currentState == State.STRING_CONST) {
-//                        theSymbol = new Lexeme(lexeme, Token.STRING_CONST);
-                        theSymbol = Token.STRING_CONST;
+                        theSymbol = new Lexeme(
+                            lexeme,
+                            Token.STRING_CONST
+                        );
                     }
                     // It's a NUMBER if we were in the NUMBER state
                     else if (currentState == State.NUMBER) {
-//                        theSymbol = new Lexeme(lexeme, Token.NUMBER);
-                        theSymbol = Token.NUMBER;
+                        theSymbol = new Lexeme(
+                            lexeme,
+                            Token.NUMBER
+                        );
                     }
 
                     // Insert the new symbol into the symbol table
-                    getSymbolTable().put(lexeme, theSymbol);
+                    getSymbolTable().putIfAbsent(lexeme, theSymbol);
                 }
 
                 // Don't add whitespace or comments to symbol stack

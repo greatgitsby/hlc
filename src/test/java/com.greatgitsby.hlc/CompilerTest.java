@@ -107,10 +107,15 @@ public class CompilerTest {
     @ParameterizedTest
     @MethodSource("provideBadProgramParserFilenames")
     void test_parser_BadPrograms(String filename) {
-        Assertions.assertThrows(SyntaxErrorException.class, () ->
-            new Parser(
-                new LexicalAnalyzer(filename)
-            ).isValidSyntax()
-        );
+        Assertions.assertThrows(SyntaxErrorException.class, () -> {
+            try {
+                new Parser(
+                    new LexicalAnalyzer(filename)
+                ).isValidSyntax();
+            } catch (SyntaxErrorException e) {
+                e.printStackTrace();
+                throw e;
+            }
+        });
     }
 }

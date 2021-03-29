@@ -127,7 +127,7 @@ public class Parser {
      *
      * @param theNewTopOfStack the new top of lexer stack
      */
-    private void setTopOfLexerStack(Symbol theNewTopOfStack) {
+    public void setTopOfLexerStack(Symbol theNewTopOfStack) {
         _currentLexerSymbol = theNewTopOfStack;
     }
 
@@ -136,7 +136,7 @@ public class Parser {
      *
      * @param theNewTopOfStack the new top of parse stack
      */
-    private void setTopOfParseStack(Symbol theNewTopOfStack) {
+    public void setTopOfParseStack(Symbol theNewTopOfStack) {
         _currentParserSymbol = theNewTopOfStack;
     }
 

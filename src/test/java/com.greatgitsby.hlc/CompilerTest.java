@@ -1,12 +1,14 @@
 package com.greatgitsby.hlc;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -41,9 +43,21 @@ public class CompilerTest {
         String[] programs;
         File programDirectory = new File(directory);
 
-        programs = Arrays.stream(Objects.requireNonNull(programDirectory.list())).map(s -> String.format("%s/%s", directory, s)).toArray(String[]::new);
+        programs = Arrays.stream(Objects.requireNonNull(programDirectory.list())).toArray(String[]::new);
 
         return Arrays.stream(programs).map(Arguments::of);
+    }
+
+    private static String resolveFile(String filepath, String filename) {
+        return String.format("%s/%s", filepath, filename);
+    }
+
+    private static String resolveGoodParserFile(String filename) {
+        return resolveFile(GOOD_PROGRAMS_PARSER_DIR, filename);
+    }
+
+    private static String resolveBadParserFile(String filename) {
+        return resolveFile(BAD_PROGRAMS_PARSER_DIR, filename);
     }
 
     /**
@@ -85,16 +99,16 @@ public class CompilerTest {
     /**
      * Test a program file against the Parser
      *
-     * @param filename the file to test
+     * @param filepath the file to test
      * @throws IOException if there was a file error
      * @throws SyntaxErrorException if the code was syntactically invalid
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = "Good Program {index}: {0}")
     @MethodSource("provideGoodProgramParserFilenames")
     void test_parser_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
         Assertions.assertTrue(
             new Parser(
-                new LexicalAnalyzer(filename)
+                new LexicalAnalyzer(resolveGoodParserFile(filename))
             ).isValidSyntax()
         );
     }
@@ -102,15 +116,15 @@ public class CompilerTest {
     /**
      * Test a program file against the Parser
      *
-     * @param filename the file to test
+     * @param filepath the file to test
      */
-    @ParameterizedTest
+    @ParameterizedTest(name = "Bad Program {index}: {0}")
     @MethodSource("provideBadProgramParserFilenames")
-    void test_parser_BadPrograms(String filename) {
+    void test_parser_BadPrograms(String filepath) {
         Assertions.assertThrows(SyntaxErrorException.class, () -> {
             try {
                 new Parser(
-                    new LexicalAnalyzer(filename)
+                    new LexicalAnalyzer(resolveBadParserFile(filepath))
                 ).isValidSyntax();
             } catch (SyntaxErrorException e) {
                 e.printStackTrace();

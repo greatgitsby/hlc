@@ -36,15 +36,16 @@ public class Parser {
      * TODO Description
      */
     public boolean isValidSyntax() throws SyntaxErrorException {
-        boolean isValidSyntax;
-
-        isValidSyntax = true;
+        boolean isValidSyntax = true;
 
         // Push the end symbol ($) onto the parse stack
-        getParseStack().push(Token.END_OF_INPUT);
-        getParseStack().push(Token.STATEMENT);
+        getParseStack().push(TerminalToken.END_OF_INPUT);
+        getParseStack().push(NonTerminalToken.STATEMENT);
 
-        while (!getLexicalAnalyzer().getSymbolStack().isEmpty() && !getParseStack().isEmpty() && isValidSyntax) {
+        while (
+            !getLexicalAnalyzer().getSymbolStack().isEmpty() &&
+            !getParseStack().isEmpty()
+        ) {
             // Set the current lexer symbol to the top of the symbol stack
             setTopOfLexerStack(getLexicalAnalyzer().getSymbolStack().peek());
 
@@ -140,501 +141,506 @@ public class Parser {
         _currentParserSymbol = theNewTopOfStack;
     }
 
+    /**
+     * TODO Description
+     *
+     * @return the parse table
+     */
     private Map<Symbol, Map<Symbol, List<Symbol>>> buildParseTable() {
         return new HashMap<>() {{
-            put(Token.STATEMENT, new HashMap<>() {{
+            put(NonTerminalToken.STATEMENT, new HashMap<>() {{
 
                 // statement -> identifier assignment_operator expression
-                put(Token.IDENTIFIER, new ArrayList<>() {{
-                    add(Token.IDENTIFIER);
-                    add(Token.ASSIGNMENT_OP);
-                    add(Token.EXPRESSION);
+                put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
+                    add(TerminalToken.IDENTIFIER);
+                    add(TerminalToken.ASSIGNMENT_OP);
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // statement -> if boolean_expression then statement else_clause
-                put(Token.IF, new ArrayList<>() {{
-                    add(Token.IF);
-                    add(Token.BOOLEAN_EXPRESSION);
-                    add(Token.THEN);
-                    add(Token.STATEMENT);
-                    add(Token.ELSE_CLAUSE);
+                put(TerminalToken.IF, new ArrayList<>() {{
+                    add(TerminalToken.IF);
+                    add(NonTerminalToken.BOOLEAN_EXPRESSION);
+                    add(TerminalToken.THEN);
+                    add(NonTerminalToken.STATEMENT);
+                    add(NonTerminalToken.ELSE_CLAUSE);
                 }});
 
                 // statement -> while boolean_expression do statement
-                put(Token.WHILE, new ArrayList<>() {{
-                    add(Token.WHILE);
-                    add(Token.BOOLEAN_EXPRESSION);
-                    add(Token.DO);
-                    add(Token.STATEMENT);
+                put(TerminalToken.WHILE, new ArrayList<>() {{
+                    add(TerminalToken.WHILE);
+                    add(NonTerminalToken.BOOLEAN_EXPRESSION);
+                    add(TerminalToken.DO);
+                    add(NonTerminalToken.STATEMENT);
                 }});
 
                 // statement -> print print_expression
-                put(Token.PRINT, new ArrayList<>() {{
-                    add(Token.PRINT);
-                    add(Token.PRINT_EXPRESSION);
+                put(TerminalToken.PRINT, new ArrayList<>() {{
+                    add(TerminalToken.PRINT);
+                    add(NonTerminalToken.PRINT_EXPRESSION);
                 }});
 
                 // statement -> begin statement_list end
-                put(Token.BEGIN, new ArrayList<>() {{
-                    add(Token.BEGIN);
-                    add(Token.STATEMENT_LIST);
-                    add(Token.END);
+                put(TerminalToken.BEGIN, new ArrayList<>() {{
+                    add(TerminalToken.BEGIN);
+                    add(NonTerminalToken.STATEMENT_LIST);
+                    add(TerminalToken.END);
                 }});
 
                 // statement -> variable identifier
-                put(Token.VARIABLE, new ArrayList<>() {{
-                    add(Token.VARIABLE);
-                    add(Token.IDENTIFIER);
+                put(TerminalToken.VARIABLE, new ArrayList<>() {{
+                    add(TerminalToken.VARIABLE);
+                    add(TerminalToken.IDENTIFIER);
                 }});
 
                 // else is in follow(statement), won't push anything new
-                put(Token.ELSE, new ArrayList<>());
+                put(TerminalToken.ELSE, new ArrayList<>());
 
                 // statement_sep is in follow(statement),
                 // won't push anything new
-                put(Token.STATEMENT_SEP, new ArrayList<>());
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>());
 
                 // end_of_input is in follow(statement),
                 // won't push anything new
-                put(Token.END_OF_INPUT, new ArrayList<>());
+                put(TerminalToken.END_OF_INPUT, new ArrayList<>());
 
                 // end is in follow(statement), won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
             }});
 
-            put(Token.ELSE_CLAUSE, new HashMap<>() {{
+            put(NonTerminalToken.ELSE_CLAUSE, new HashMap<>() {{
 
                 // else_clause -> else statement
-                put(Token.ELSE, new ArrayList<>() {{
-                    add(Token.ELSE);
-                    add(Token.STATEMENT);
+                put(TerminalToken.ELSE, new ArrayList<>() {{
+                    add(TerminalToken.ELSE);
+                    add(NonTerminalToken.STATEMENT);
                 }});
 
                 // statement_sep is in follow(else_clause),
                 // won't push anything new
-                put(Token.STATEMENT_SEP, new ArrayList<>());
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>());
 
                 // end_of_input is in follow(else_clause),
                 // won't push anything new
-                put(Token.END_OF_INPUT, new ArrayList<>());
+                put(TerminalToken.END_OF_INPUT, new ArrayList<>());
 
                 // end is in follow(else_clause),
                 // won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
             }});
 
-            put(Token.STATEMENT_LIST, new HashMap<>() {{
+            put(NonTerminalToken.STATEMENT_LIST, new HashMap<>() {{
 
                 // statement_list -> statement sep_list
-                put(Token.IDENTIFIER, new ArrayList<>() {{
-                    add(Token.STATEMENT);
-                    add(Token.SEPARATED_LIST);
+                put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
+                    add(NonTerminalToken.STATEMENT);
+                    add(NonTerminalToken.SEPARATED_LIST);
                 }});
 
                 // statement_list -> statement sep_list
-                put(Token.IF, new ArrayList<>() {{
-                    add(Token.STATEMENT);
-                    add(Token.SEPARATED_LIST);
+                put(TerminalToken.IF, new ArrayList<>() {{
+                    add(NonTerminalToken.STATEMENT);
+                    add(NonTerminalToken.SEPARATED_LIST);
                 }});
 
                 // statement_list -> statement sep_list
-                put(Token.WHILE, new ArrayList<>() {{
-                    add(Token.STATEMENT);
-                    add(Token.SEPARATED_LIST);
+                put(TerminalToken.WHILE, new ArrayList<>() {{
+                    add(NonTerminalToken.STATEMENT);
+                    add(NonTerminalToken.SEPARATED_LIST);
                 }});
 
                 // statement_list -> statement sep_list
-                put(Token.PRINT, new ArrayList<>() {{
-                    add(Token.STATEMENT);
-                    add(Token.SEPARATED_LIST);
+                put(TerminalToken.PRINT, new ArrayList<>() {{
+                    add(NonTerminalToken.STATEMENT);
+                    add(NonTerminalToken.SEPARATED_LIST);
                 }});
 
                 // statement_list -> statement sep_list
-                put(Token.BEGIN, new ArrayList<>() {{
-                    add(Token.STATEMENT);
-                    add(Token.SEPARATED_LIST);
+                put(TerminalToken.BEGIN, new ArrayList<>() {{
+                    add(NonTerminalToken.STATEMENT);
+                    add(NonTerminalToken.SEPARATED_LIST);
                 }});
 
                 // statement_list -> statement sep_list
-                put(Token.VARIABLE, new ArrayList<>() {{
-                    add(Token.STATEMENT);
-                    add(Token.SEPARATED_LIST);
+                put(TerminalToken.VARIABLE, new ArrayList<>() {{
+                    add(NonTerminalToken.STATEMENT);
+                    add(NonTerminalToken.SEPARATED_LIST);
                 }});
 
                 // end is in follow(statement), won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
             }});
 
-            put(Token.SEPARATED_LIST, new HashMap<>() {{
+            put(NonTerminalToken.SEPARATED_LIST, new HashMap<>() {{
 
                 // sep_list -> statement_sep statement sep_list
-                put(Token.STATEMENT_SEP, new ArrayList<>() {{
-                    add(Token.STATEMENT_SEP);
-                    add(Token.STATEMENT);
-                    add(Token.SEPARATED_LIST);
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>() {{
+                    add(TerminalToken.STATEMENT_SEP);
+                    add(NonTerminalToken.STATEMENT);
+                    add(NonTerminalToken.SEPARATED_LIST);
                 }});
 
                 // end is in follow(sep_list), won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
             }});
 
-            put(Token.PRINT_EXPRESSION, new HashMap<>() {{
+            put(NonTerminalToken.PRINT_EXPRESSION, new HashMap<>() {{
 
                 // print_expression -> expression
-                put(Token.IDENTIFIER, new ArrayList<>() {{
-                    add(Token.EXPRESSION);
+                put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // print_expression -> expression
-                put(Token.LEFT_PAREN, new ArrayList<>() {{
-                    add(Token.EXPRESSION);
+                put(TerminalToken.LEFT_PAREN, new ArrayList<>() {{
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // print_expression -> expression
-                put(Token.NUMBER, new ArrayList<>() {{
-                    add(Token.EXPRESSION);
+                put(TerminalToken.NUMBER, new ArrayList<>() {{
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // print_expression -> expression
-                put(Token.ADDITIVE_OP, new ArrayList<>() {{
-                    add(Token.EXPRESSION);
+                put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // print_expression -> string_const
-                put(Token.STRING_CONST, new ArrayList<>() {{
-                    add(Token.STRING_CONST);
+                put(TerminalToken.STRING_CONST, new ArrayList<>() {{
+                    add(TerminalToken.STRING_CONST);
                 }});
 
                 // statement_sep is in follow(sep_list),
                 // won't push anything new
-                put(Token.STATEMENT_SEP, new ArrayList<>());
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>());
 
                 // end_of_input is in follow(sep_list),
                 // won't push anything new
-                put(Token.END_OF_INPUT, new ArrayList<>());
+                put(TerminalToken.END_OF_INPUT, new ArrayList<>());
 
                 // else is in follow(sep_list), won't push anything new
-                put(Token.ELSE, new ArrayList<>());
+                put(TerminalToken.ELSE, new ArrayList<>());
 
                 // end is in follow(sep_list), won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
             }});
 
-            put(Token.BOOLEAN_EXPRESSION, new HashMap<>() {{
+            put(NonTerminalToken.BOOLEAN_EXPRESSION, new HashMap<>() {{
 
                 // boolean_expression -> expression relational_op expression
-                put(Token.IDENTIFIER, new ArrayList<>() {{
-                    add(Token.EXPRESSION);
-                    add(Token.RELATIONAL_OP);
-                    add(Token.EXPRESSION);
+                put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
+                    add(NonTerminalToken.EXPRESSION);
+                    add(TerminalToken.RELATIONAL_OP);
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // boolean_expression -> expression relational_op expression
-                put(Token.LEFT_PAREN, new ArrayList<>() {{
-                    add(Token.EXPRESSION);
-                    add(Token.RELATIONAL_OP);
-                    add(Token.EXPRESSION);
+                put(TerminalToken.LEFT_PAREN, new ArrayList<>() {{
+                    add(NonTerminalToken.EXPRESSION);
+                    add(TerminalToken.RELATIONAL_OP);
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // boolean_expression -> expression relational_op expression
-                put(Token.NUMBER, new ArrayList<>() {{
-                    add(Token.EXPRESSION);
-                    add(Token.RELATIONAL_OP);
-                    add(Token.EXPRESSION);
+                put(TerminalToken.NUMBER, new ArrayList<>() {{
+                    add(NonTerminalToken.EXPRESSION);
+                    add(TerminalToken.RELATIONAL_OP);
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // boolean_expression -> expression relational_op expression
-                put(Token.ADDITIVE_OP, new ArrayList<>() {{
-                    add(Token.EXPRESSION);
-                    add(Token.RELATIONAL_OP);
-                    add(Token.EXPRESSION);
+                put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
+                    add(NonTerminalToken.EXPRESSION);
+                    add(TerminalToken.RELATIONAL_OP);
+                    add(NonTerminalToken.EXPRESSION);
                 }});
 
                 // then is in follow(boolean_expression),
                 // won't push anything new
-                put(Token.THEN, new ArrayList<>());
+                put(TerminalToken.THEN, new ArrayList<>());
 
                 // do is in follow(boolean_expression),
                 // won't push anything new
-                put(Token.DO, new ArrayList<>());
+                put(TerminalToken.DO, new ArrayList<>());
             }});
 
-            put(Token.EXPRESSION, new HashMap<>() {{
+            put(NonTerminalToken.EXPRESSION, new HashMap<>() {{
 
                 // expression -> term addition
-                put(Token.IDENTIFIER, new ArrayList<>() {{
-                    add(Token.TERM);
-                    add(Token.ADDITION);
+                put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
+                    add(NonTerminalToken.TERM);
+                    add(NonTerminalToken.ADDITION);
                 }});
 
                 // expression -> term addition
-                put(Token.LEFT_PAREN, new ArrayList<>() {{
-                    add(Token.TERM);
-                    add(Token.ADDITION);
+                put(TerminalToken.LEFT_PAREN, new ArrayList<>() {{
+                    add(NonTerminalToken.TERM);
+                    add(NonTerminalToken.ADDITION);
                 }});
 
                 // expression -> term addition
-                put(Token.NUMBER, new ArrayList<>() {{
-                    add(Token.TERM);
-                    add(Token.ADDITION);
+                put(TerminalToken.NUMBER, new ArrayList<>() {{
+                    add(NonTerminalToken.TERM);
+                    add(NonTerminalToken.ADDITION);
                 }});
 
                 // expression -> term addition
-                put(Token.ADDITIVE_OP, new ArrayList<>() {{
-                    add(Token.TERM);
-                    add(Token.ADDITION);
+                put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
+                    add(NonTerminalToken.TERM);
+                    add(NonTerminalToken.ADDITION);
                 }});
 
                 // end_of_input is in follow(expression),
                 // won't push anything new
-                put(Token.END_OF_INPUT, new ArrayList<>());
+                put(TerminalToken.END_OF_INPUT, new ArrayList<>());
 
                 // else is in follow(expression),
                 // won't push anything new
-                put(Token.ELSE, new ArrayList<>());
+                put(TerminalToken.ELSE, new ArrayList<>());
 
                 // do is in follow(expression),
                 // won't push anything new
-                put(Token.DO, new ArrayList<>());
+                put(TerminalToken.DO, new ArrayList<>());
 
                 // end is in follow(expression),
                 // won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
 
                 // statement_sep is in follow(expression),
                 // won't push anything new
-                put(Token.STATEMENT_SEP, new ArrayList<>());
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>());
 
                 // relational_op is in follow(expression),
                 // won't push anything new
-                put(Token.RELATIONAL_OP, new ArrayList<>());
+                put(TerminalToken.RELATIONAL_OP, new ArrayList<>());
 
                 // then is in follow(expression),
                 // won't push anything new
-                put(Token.THEN, new ArrayList<>());
+                put(TerminalToken.THEN, new ArrayList<>());
 
                 // right_paren is in follow(expression),
                 // won't push anything new
-                put(Token.RIGHT_PAREN, new ArrayList<>());
+                put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
             }});
 
-            put(Token.ADDITION, new HashMap<>() {{
+            put(NonTerminalToken.ADDITION, new HashMap<>() {{
 
                 // addition -> additive_op term addition
-                put(Token.ADDITIVE_OP, new ArrayList<>() {{
-                    add(Token.ADDITIVE_OP);
-                    add(Token.TERM);
-                    add(Token.ADDITION);
+                put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
+                    add(TerminalToken.ADDITIVE_OP);
+                    add(NonTerminalToken.TERM);
+                    add(NonTerminalToken.ADDITION);
                 }});
 
                 // end_of_input is in follow(addition),
                 // won't push anything new
-                put(Token.END_OF_INPUT, new ArrayList<>());
+                put(TerminalToken.END_OF_INPUT, new ArrayList<>());
 
                 // else is in follow(addition),
                 // won't push anything new
-                put(Token.ELSE, new ArrayList<>());
+                put(TerminalToken.ELSE, new ArrayList<>());
 
                 // do is in follow(addition),
                 // won't push anything new
-                put(Token.DO, new ArrayList<>());
+                put(TerminalToken.DO, new ArrayList<>());
 
                 // end is in follow(addition),
                 // won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
 
                 // statement_sep is in follow(addition),
                 // won't push anything new
-                put(Token.STATEMENT_SEP, new ArrayList<>());
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>());
 
                 // relational_op is in follow(addition),
                 // won't push anything new
-                put(Token.RELATIONAL_OP, new ArrayList<>());
+                put(TerminalToken.RELATIONAL_OP, new ArrayList<>());
 
                 // then is in follow(addition),
                 // won't push anything new
-                put(Token.THEN, new ArrayList<>());
+                put(TerminalToken.THEN, new ArrayList<>());
 
                 // right_paren is in follow(addition),
                 // won't push anything new
-                put(Token.RIGHT_PAREN, new ArrayList<>());
+                put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
             }});
 
-            put(Token.TERM, new HashMap<>() {{
+            put(NonTerminalToken.TERM, new HashMap<>() {{
 
                 // term -> factor multiplication
-                put(Token.IDENTIFIER, new ArrayList<>() {{
-                    add(Token.FACTOR);
-                    add(Token.MULTIPLICATION);
+                put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
+                    add(NonTerminalToken.FACTOR);
+                    add(NonTerminalToken.MULTIPLICATION);
                 }});
 
                 // term -> factor multiplication
-                put(Token.LEFT_PAREN, new ArrayList<>() {{
-                    add(Token.FACTOR);
-                    add(Token.MULTIPLICATION);
+                put(TerminalToken.LEFT_PAREN, new ArrayList<>() {{
+                    add(NonTerminalToken.FACTOR);
+                    add(NonTerminalToken.MULTIPLICATION);
                 }});
 
                 // term -> factor multiplication
-                put(Token.NUMBER, new ArrayList<>() {{
-                    add(Token.FACTOR);
-                    add(Token.MULTIPLICATION);
+                put(TerminalToken.NUMBER, new ArrayList<>() {{
+                    add(NonTerminalToken.FACTOR);
+                    add(NonTerminalToken.MULTIPLICATION);
                 }});
 
                 // term -> factor multiplication
-                put(Token.ADDITIVE_OP, new ArrayList<>() {{
-                    add(Token.FACTOR);
-                    add(Token.MULTIPLICATION);
+                put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
+                    add(NonTerminalToken.FACTOR);
+                    add(NonTerminalToken.MULTIPLICATION);
                 }});
 
                 // end_of_input is in follow(term),
                 // won't push anything new
-                put(Token.END_OF_INPUT, new ArrayList<>());
+                put(TerminalToken.END_OF_INPUT, new ArrayList<>());
 
                 // else is in follow(term),
                 // won't push anything new
-                put(Token.ELSE, new ArrayList<>());
+                put(TerminalToken.ELSE, new ArrayList<>());
 
                 // do is in follow(term),
                 // won't push anything new
-                put(Token.DO, new ArrayList<>());
+                put(TerminalToken.DO, new ArrayList<>());
 
                 // end is in follow(term),
                 // won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
 
                 // statement_sep is in follow(term),
                 // won't push anything new
-                put(Token.STATEMENT_SEP, new ArrayList<>());
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>());
 
                 // relational_op is in follow(term),
                 // won't push anything new
-                put(Token.RELATIONAL_OP, new ArrayList<>());
+                put(TerminalToken.RELATIONAL_OP, new ArrayList<>());
 
                 // then is in follow(term),
                 // won't push anything new
-                put(Token.THEN, new ArrayList<>());
+                put(TerminalToken.THEN, new ArrayList<>());
 
                 // right_paren is in follow(term),
                 // won't push anything new
-                put(Token.RIGHT_PAREN, new ArrayList<>());
+                put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
 
                 // multiplicative_op is in follow(term),
                 // won't push anything new
-                put(Token.MULTIPLICATIVE_OP, new ArrayList<>());
+                put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>());
             }});
 
-            put(Token.MULTIPLICATION, new HashMap<>() {{
+            put(NonTerminalToken.MULTIPLICATION, new HashMap<>() {{
 
                 // multiplication -> multiplicative_op factor multiplication
-                put(Token.MULTIPLICATIVE_OP, new ArrayList<>() {{
-                    add(Token.MULTIPLICATIVE_OP);
-                    add(Token.FACTOR);
-                    add(Token.MULTIPLICATION);
+                put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>() {{
+                    add(TerminalToken.MULTIPLICATIVE_OP);
+                    add(NonTerminalToken.FACTOR);
+                    add(NonTerminalToken.MULTIPLICATION);
                 }});
 
                 // end_of_input is in follow(multiplication),
                 // won't push anything new
-                put(Token.END_OF_INPUT, new ArrayList<>());
+                put(TerminalToken.END_OF_INPUT, new ArrayList<>());
 
                 // else is in follow(multiplication),
                 // won't push anything new
-                put(Token.ELSE, new ArrayList<>());
+                put(TerminalToken.ELSE, new ArrayList<>());
 
                 // do is in follow(multiplication),
                 // won't push anything new
-                put(Token.DO, new ArrayList<>());
+                put(TerminalToken.DO, new ArrayList<>());
 
                 // end is in follow(multiplication),
                 // won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
 
                 // statement_sep is in follow(multiplication),
                 // won't push anything new
-                put(Token.STATEMENT_SEP, new ArrayList<>());
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>());
 
                 // relational_op is in follow(multiplication),
                 // won't push anything new
-                put(Token.RELATIONAL_OP, new ArrayList<>());
+                put(TerminalToken.RELATIONAL_OP, new ArrayList<>());
 
                 // then is in follow(multiplication),
                 // won't push anything new
-                put(Token.THEN, new ArrayList<>());
+                put(TerminalToken.THEN, new ArrayList<>());
 
                 // right_paren is in follow(multiplication),
                 // won't push anything new
-                put(Token.RIGHT_PAREN, new ArrayList<>());
+                put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
 
                 // add_op is in follow(multiplication),
                 // won't push anything new
-                put(Token.ADDITIVE_OP, new ArrayList<>());
+                put(TerminalToken.ADDITIVE_OP, new ArrayList<>());
             }});
 
-            put(Token.FACTOR, new HashMap<>() {{
+            put(NonTerminalToken.FACTOR, new HashMap<>() {{
 
                 // factor -> identifier
-                put(Token.IDENTIFIER, new ArrayList<>() {{
-                    add(Token.IDENTIFIER);
+                put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
+                    add(TerminalToken.IDENTIFIER);
                 }});
 
                 // factor -> left_paren expression right_paren
-                put(Token.LEFT_PAREN, new ArrayList<>() {{
-                    add(Token.LEFT_PAREN);
-                    add(Token.EXPRESSION);
-                    add(Token.RIGHT_PAREN);
+                put(TerminalToken.LEFT_PAREN, new ArrayList<>() {{
+                    add(TerminalToken.LEFT_PAREN);
+                    add(NonTerminalToken.EXPRESSION);
+                    add(TerminalToken.RIGHT_PAREN);
                 }});
 
                 // factor -> number
-                put(Token.NUMBER, new ArrayList<>() {{
-                    add(Token.NUMBER);
+                put(TerminalToken.NUMBER, new ArrayList<>() {{
+                    add(TerminalToken.NUMBER);
                 }});
 
                 // factor -> signed_term
-                put(Token.ADDITIVE_OP, new ArrayList<>() {{
-                    add(Token.SIGNED_TERM);
+                put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
+                    add(NonTerminalToken.SIGNED_TERM);
                 }});
 
                 // end_of_input is in follow(factor),
                 // won't push anything new
-                put(Token.END_OF_INPUT, new ArrayList<>());
+                put(TerminalToken.END_OF_INPUT, new ArrayList<>());
 
                 // else is in follow(factor),
                 // won't push anything new
-                put(Token.ELSE, new ArrayList<>());
+                put(TerminalToken.ELSE, new ArrayList<>());
 
                 // do is in follow(factor),
                 // won't push anything new
-                put(Token.DO, new ArrayList<>());
+                put(TerminalToken.DO, new ArrayList<>());
 
                 // end is in follow(factor),
                 // won't push anything new
-                put(Token.END, new ArrayList<>());
+                put(TerminalToken.END, new ArrayList<>());
 
                 // statement_sep is in follow(factor),
                 // won't push anything new
-                put(Token.STATEMENT_SEP, new ArrayList<>());
+                put(TerminalToken.STATEMENT_SEP, new ArrayList<>());
 
                 // relational_op is in follow(factor),
                 // won't push anything new
-                put(Token.RELATIONAL_OP, new ArrayList<>());
+                put(TerminalToken.RELATIONAL_OP, new ArrayList<>());
 
                 // then is in follow(factor),
                 // won't push anything new
-                put(Token.THEN, new ArrayList<>());
+                put(TerminalToken.THEN, new ArrayList<>());
 
                 // right_paren is in follow(factor),
                 // won't push anything new
-                put(Token.RIGHT_PAREN, new ArrayList<>());
+                put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
 
                 // multiplicative_op is in follow(factor),
                 // won't push anything new
-                put(Token.MULTIPLICATIVE_OP, new ArrayList<>());
+                put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>());
             }});
 
-            put(Token.SIGNED_TERM, new HashMap<>() {{
+            put(NonTerminalToken.SIGNED_TERM, new HashMap<>() {{
 
-                put(Token.ADDITIVE_OP, new ArrayList<>() {{
-                    add(Token.ADDITIVE_OP);
-                    add(Token.TERM);
+                put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
+                    add(TerminalToken.ADDITIVE_OP);
+                    add(NonTerminalToken.TERM);
                 }});
             }});
         }};

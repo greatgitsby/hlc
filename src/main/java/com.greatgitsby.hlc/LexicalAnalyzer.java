@@ -47,29 +47,29 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
         // Insert all of our reserved keywords as "symbols" in
         // our symbol table
         _symbolTable = new HashMap<>() {{
-            put("variable", Token.VARIABLE);
-            put("print", Token.PRINT);
-            put("if", Token.IF);
-            put("then", Token.THEN);
-            put("else", Token.ELSE);
-            put("while", Token.WHILE);
-            put("do", Token.DO);
-            put("begin", Token.BEGIN);
-            put("end", Token.END);
-            put("+", Token.ADDITIVE_OP);
-            put("-", Token.ADDITIVE_OP);
-            put("<", Token.RELATIONAL_OP);
-            put("<=", Token.RELATIONAL_OP);
-            put("<>", Token.RELATIONAL_OP);
-            put("=", Token.RELATIONAL_OP);
-            put(">", Token.RELATIONAL_OP);
-            put(">=", Token.RELATIONAL_OP);
-            put("*", Token.MULTIPLICATIVE_OP);
-            put("/", Token.MULTIPLICATIVE_OP);
-            put(":=", Token.ASSIGNMENT_OP);
-            put(";", Token.STATEMENT_SEP);
-            put("(", Token.LEFT_PAREN);
-            put(")", Token.RIGHT_PAREN);
+            put("variable", TerminalToken.VARIABLE);
+            put("print", TerminalToken.PRINT);
+            put("if", TerminalToken.IF);
+            put("then", TerminalToken.THEN);
+            put("else", TerminalToken.ELSE);
+            put("while", TerminalToken.WHILE);
+            put("do", TerminalToken.DO);
+            put("begin", TerminalToken.BEGIN);
+            put("end", TerminalToken.END);
+            put("+", TerminalToken.ADDITIVE_OP);
+            put("-", TerminalToken.ADDITIVE_OP);
+            put("<", TerminalToken.RELATIONAL_OP);
+            put("<=", TerminalToken.RELATIONAL_OP);
+            put("<>", TerminalToken.RELATIONAL_OP);
+            put("=", TerminalToken.RELATIONAL_OP);
+            put(">", TerminalToken.RELATIONAL_OP);
+            put(">=", TerminalToken.RELATIONAL_OP);
+            put("*", TerminalToken.MULTIPLICATIVE_OP);
+            put("/", TerminalToken.MULTIPLICATIVE_OP);
+            put(":=", TerminalToken.ASSIGNMENT_OP);
+            put(";", TerminalToken.STATEMENT_SEP);
+            put("(", TerminalToken.LEFT_PAREN);
+            put(")", TerminalToken.RIGHT_PAREN);
         }};
 
         // START state map
@@ -360,21 +360,21 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                     if (currentState == State.SYMBOL) {
                         theSymbol = new Lexeme(
                             lexeme,
-                            Token.IDENTIFIER
+                            TerminalToken.IDENTIFIER
                         );
                     }
                     // It's whitespace if we were in the WHITESPACE state
                     else if (currentState == State.WHITESPACE) {
                         theSymbol = new Lexeme(
                             lexeme,
-                            Token.WHITESPACE
+                            TerminalToken.WHITESPACE
                         );
                     }
                     // It's a comment if we were in the COMMENT state
                     else if (currentState == State.COMMENT) {
                         theSymbol = new Lexeme(
                             lexeme,
-                            Token.COMMENT
+                            TerminalToken.COMMENT
                         );
                     }
                     // It's a STRING_CONST if we were in the STRING_CONST
@@ -382,14 +382,14 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
                     else if (currentState == State.STRING_CONST) {
                         theSymbol = new Lexeme(
                             lexeme,
-                            Token.STRING_CONST
+                            TerminalToken.STRING_CONST
                         );
                     }
                     // It's a NUMBER if we were in the NUMBER state
                     else if (currentState == State.NUMBER) {
                         theSymbol = new Lexeme(
                             lexeme,
-                            Token.NUMBER
+                            TerminalToken.NUMBER
                         );
                     }
 
@@ -439,7 +439,7 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
 
         // Push the final END_OF_INPUT char onto the stack
         // for our end state
-        queueSymbol(Token.END_OF_INPUT);
+        queueSymbol(TerminalToken.END_OF_INPUT);
     }
 
     /**

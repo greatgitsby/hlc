@@ -9,7 +9,7 @@ package com.greatgitsby.hlc;
  */
 public class Lexeme implements Symbol {
     private final String _value;
-    private final Token _tokenType;
+    private final TerminalToken _tokenType;
 
     /**
      * Constructs a new Lexeme
@@ -17,7 +17,7 @@ public class Lexeme implements Symbol {
      * @param value the value from the file
      * @param tokenType the type of Lexeme this is
      */
-    public Lexeme(String value, Token tokenType) {
+    public Lexeme(String value, TerminalToken tokenType) {
         _value = value;
         _tokenType = tokenType;
     }
@@ -27,7 +27,7 @@ public class Lexeme implements Symbol {
      *
      * @return the token type of the lexeme
      */
-    public Token getTokenType() {
+    public TerminalToken getTokenType() {
         return _tokenType;
     }
 

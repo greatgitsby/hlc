@@ -178,7 +178,7 @@ public class Parser {
     private Map<Symbol, Map<Symbol, List<Symbol>>> buildParseTable() {
         return new HashMap<>() {{
 
-            // STATEMENT
+            // statement
             put(NonTerminalToken.STATEMENT, new HashMap<>() {{
 
                 // statement -> identifier assignment_operator expression
@@ -240,7 +240,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
-            // ELSE_CLAUSE
+            // else_clause
             put(NonTerminalToken.ELSE_CLAUSE, new HashMap<>() {{
 
                 // else_clause -> else statement
@@ -262,7 +262,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
-            // STATEMENT_LIST
+            // statement_list
             put(NonTerminalToken.STATEMENT_LIST, new HashMap<>() {{
 
                 // statement_list -> statement sep_list
@@ -305,10 +305,10 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
-            // SEPARATED_LIST
+            // separated_list
             put(NonTerminalToken.SEPARATED_LIST, new HashMap<>() {{
 
-                // sep_list -> statement_sep statement sep_list
+                // separated_list -> statement_sep statement sep_list
                 put(TerminalToken.STATEMENT_SEP, new ArrayList<>() {{
                     add(TerminalToken.STATEMENT_SEP);
                     add(NonTerminalToken.STATEMENT);
@@ -319,7 +319,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
-            // PRINT_EXPRESSION
+            // print_expression
             put(NonTerminalToken.PRINT_EXPRESSION, new HashMap<>() {{
 
                 // print_expression -> expression
@@ -362,7 +362,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
-            // BOOLEAN_EXPRESSION
+            // boolean_expression
             put(NonTerminalToken.BOOLEAN_EXPRESSION, new HashMap<>() {{
 
                 // boolean_expression -> expression relational_op expression
@@ -402,7 +402,7 @@ public class Parser {
                 put(TerminalToken.DO, new ArrayList<>());
             }});
 
-            // EXPRESSION
+            // expression
             put(NonTerminalToken.EXPRESSION, new HashMap<>() {{
 
                 // expression -> term addition
@@ -462,7 +462,7 @@ public class Parser {
                 put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
             }});
 
-            // ADDITION
+            // addition
             put(NonTerminalToken.ADDITION, new HashMap<>() {{
 
                 // addition -> additive_op term addition
@@ -505,7 +505,7 @@ public class Parser {
                 put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
             }});
 
-            // TERM
+            // term
             put(NonTerminalToken.TERM, new HashMap<>() {{
 
                 // term -> factor multiplication
@@ -569,7 +569,7 @@ public class Parser {
                 put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>());
             }});
 
-            // MULTIPLICATION
+            // multiplication
             put(NonTerminalToken.MULTIPLICATION, new HashMap<>() {{
 
                 // multiplication -> multiplicative_op factor multiplication
@@ -616,7 +616,7 @@ public class Parser {
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>());
             }});
 
-            // FACTOR
+            // factor
             put(NonTerminalToken.FACTOR, new HashMap<>() {{
 
                 // factor -> identifier
@@ -678,7 +678,7 @@ public class Parser {
                 put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>());
             }});
 
-            // SIGNED_TERM
+            // signed_term
             put(NonTerminalToken.SIGNED_TERM, new HashMap<>() {{
 
                 // signed_term -> additive_op term

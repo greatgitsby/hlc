@@ -5,7 +5,7 @@ import java.util.*;
 /**
  * NonTerminalToken
  *
- * TODO Description
+ * Represents the set of non-terminal tokens in the HansenLite language.
  */
 public enum NonTerminalToken implements Symbol {
     STATEMENT,
@@ -26,61 +26,112 @@ public enum NonTerminalToken implements Symbol {
      */
     @Override
     public void doTheThing(Parser theParser) throws SyntaxErrorException {
-        ListIterator<Symbol> listIterator;
+        // Local variables
+        Symbol currentLexerSymbol;
+        Symbol nextPossibleSymbol;
+        StringBuilder expected;
         List<Symbol> theListOfSymbols;
+        ListIterator<Symbol> listIterator;
+        Set<Symbol> possibleSymbols;
+        Iterator<Symbol> possibleSymbolsIterator;
 
+        // Pop the TOS off the parse stack
         theParser.getParseStack().pop();
 
-        Symbol lexerSymbolToTest = theParser.getTopOfLexerStack();
+        // Get the current parser lexer symbol
+        currentLexerSymbol = theParser.getCurrentLexerSymbol();
 
-        if (theParser.getTopOfLexerStack() instanceof Lexeme) {
-            lexerSymbolToTest = ((Lexeme) theParser.getTopOfLexerStack()).getTokenType();
+        // If this lexer symbol is a Lexeme, we must acquire the token
+        // type of the Lexeme
+        //
+        // TODO Achieve a better OOP approach when we start to utilize
+        //  this output for code generation
+        //
+        if (theParser.getCurrentLexerSymbol() instanceof Lexeme) {
+            currentLexerSymbol =
+                ((Lexeme) theParser.getCurrentLexerSymbol()).getTokenType();
         }
 
+        // If the parse table has an entry for the top of stack of the
+        // parse stack and in that entry, there is an entry for the
+        // next lexeme symbol, then it should push the list of symbols
+        // onto the parse stack
         if (
-                theParser.getParseTable().containsKey(theParser.getTopOfParseStack()) &&
-                        theParser.getParseTable().get(theParser.getTopOfParseStack()).containsKey(
-                                lexerSymbolToTest
-                        )
+            theParser.getParseTable().containsKey(
+                theParser.getTopOfParseStack()
+            ) &&
+            theParser.getParseTable().get(theParser.getTopOfParseStack())
+                .containsKey(currentLexerSymbol)
         ) {
+            // Get the symbols to push onto the stack
             theListOfSymbols = theParser.getParseTable()
-                    .get(theParser.getTopOfParseStack())
-                    .get(lexerSymbolToTest);
+                .get(theParser.getTopOfParseStack())
+                .get(currentLexerSymbol);
 
-            listIterator = theListOfSymbols.listIterator(theListOfSymbols.size());
+            // Get the iterator for the list
+            listIterator = theListOfSymbols.listIterator(
+                theListOfSymbols.size()
+            );
 
+            // Push the set of terminals and non-terminals onto the stack
+            // in reverse order
             while (listIterator.hasPrevious()) {
                 theParser.getParseStack().push(listIterator.previous());
             }
-        } else {
-            StringBuilder expected = new StringBuilder();
-            Set<Symbol> possibleSymbols =
-                    theParser
-                            .getParseTable()
-                            .get(theParser.getTopOfParseStack())
-                            .keySet();
+        }
+        // If either entry is missing, a syntax error was encountered.
+        // Formulate a helpful error message to help identify where the
+        // error occurred
+        else {
+            expected = new StringBuilder();
+            // Output current line and char number
+            expected.append(
+                String.format(
+                    "Line %d Char %d - Expected ",
+                        theParser.getLexicalAnalyzer().getLineNumber(),
+                        theParser.getLexicalAnalyzer().getCharacterNumber()
+                )
+            );
 
-            Iterator<Symbol> theIterator = possibleSymbols.iterator();
+            // Get the set of possible symbols (every key in the parse table
+            // for this entry)
+            possibleSymbols =
+                theParser
+                    .getParseTable()
+                    .get(theParser.getTopOfParseStack())
+                    .keySet();
 
-            expected.append(theIterator.next());
+            // Get the iterator for the set of possible symbols
+            possibleSymbolsIterator = possibleSymbols.iterator();
 
+            // Push the first possible symbol
+            expected.append(possibleSymbolsIterator.next());
+
+            // Two options should be "this OR that"
             if (possibleSymbols.size() == 2) {
-                expected.append(" or ").append(theIterator.next());
-            } else {
+                expected.append(" or ").append(possibleSymbolsIterator.next());
+            }
+            // Prepare to comma separate
+            else {
                 expected.append(", ");
             }
 
-            while (theIterator.hasNext()) {
-                Symbol nextSymbol = theIterator.next();
+            // Emit the other possible symbols
+            while (possibleSymbolsIterator.hasNext()) {
+                nextPossibleSymbol = possibleSymbolsIterator.next();
 
-                if (!theIterator.hasNext()) {
-                    expected.append("or ").append(nextSymbol);
-                } else {
-                    expected.append(nextSymbol).append(", ");
+                // End of statement
+                if (!possibleSymbolsIterator.hasNext()) {
+                    expected.append("or ").append(nextPossibleSymbol);
+                }
+                // Comma separate next value (Oxford comma included)
+                else {
+                    expected.append(nextPossibleSymbol).append(", ");
                 }
             }
 
-            throw new SyntaxErrorException(String.format("Expected %s", expected));
+            // Throw the error with the expected string
+            throw new SyntaxErrorException(expected.toString());
         }
     }
 }

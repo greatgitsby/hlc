@@ -14,8 +14,7 @@ import java.util.*;
  * in the _symbols deque for the programmer to utilize
  * (in preparation of passing to a Parser...)
  */
-public class LexicalAnalyzer implements Iterable<Symbol> {
-    private final ArrayDeque<Symbol> _symbolQueue;
+public class LexicalAnalyzer {
     private final HashMap<State, HashMap<Character, State>> _stateTable;
     private final HashMap<String, Symbol> _symbolTable;
     private State _currentState;
@@ -26,12 +25,14 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
     private int _lexemeStartLineNumber;
     private int _lexemeStartCharNumber;
     private boolean _hasNextLexeme;
+    private int _currentChar;
 
     // Static variables
     private static final char CARRIAGE_RETURN = '\r';
     private static final char END_COMMENT = '}';
     private static final char END_STRING_CONST = '"';
     private static final int  EOF = -1;
+    private static final int EMPTY_BUF = 65535;
     private static final char DIGIT = '0';
     private static final char LETTER = 'a';
     private static final char NEWLINE = '\n';
@@ -59,9 +60,10 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
             new FileReader(new File(filepath).getAbsoluteFile())
         );
 
+        _currentChar = _fileReader.read();
+
         _currentState = State.START;
         _hasNextLexeme = true;
-        _symbolQueue = new ArrayDeque<>();
         _stateTable = new HashMap<>();
 
         // Insert all of our reserved keywords as "symbols" in
@@ -214,6 +216,246 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
     }
 
     /**
+     * Provides the next symbol if there is another to return
+     *
+     * @return the next symbol
+     * @throws NoSuchElementException if there are no more lexemes to return
+     */
+     public Symbol nextSymbol() throws SyntaxErrorException {
+         // Local variables
+         Symbol theSymbol;
+         StringBuilder lexemeValue;
+         String lexeme;
+         boolean hasAcquiredSymbol;
+         char normalizedChar;
+
+         // Initialize locals
+         theSymbol = null;
+         lexemeValue = new StringBuilder();
+         hasAcquiredSymbol = false;
+
+         // Loop, consuming characters until a valid lexeme
+         // is formed (or an error occurs)
+         while (!hasAcquiredSymbol) {
+
+             // If the read-in char is EOF, we should stop running
+             // Copy the read-in char so we can normalize it
+             // if it is alphanumeric
+             normalizedChar = (char) _currentChar;
+
+             // Normalize letters and numbers for the
+             // state table
+             if (Character.isDigit(normalizedChar)) {
+                 normalizedChar = DIGIT;
+             } else if (Character.isLetter(normalizedChar)) {
+                 normalizedChar = LETTER;
+             }
+
+             // Handle the IN_COMMENT state, consume all
+             // characters until we hit the character that
+             // signals the end of a comment
+             if (_currentState == State.IN_COMMENT) {
+
+                 // If this is the start of a new lexeme, then
+                 // mark the starting line and char numbers of this
+                 // lexeme
+                 if (lexemeValue.isEmpty()) {
+                     _lexemeStartCharNumber = _charNumber;
+                     _lexemeStartLineNumber = _lineNumber;
+                 }
+
+                 // Add the incoming character to the lexeme
+                 lexemeValue.append(Character.toString(_currentChar));
+                 _charNumber++;
+
+                 // If we have hit the END_COMMENT character,
+                 // it is time to move to the COMMENT state
+                 if (normalizedChar == END_COMMENT) {
+                     _currentState = State.COMMENT;
+                 }
+             } else if (_currentState == State.IN_STRING) {
+
+                 // If this is the start of a new lexeme, then
+                 // mark the starting line and char numbers of this
+                 // lexeme
+                 if (lexemeValue.isEmpty()) {
+                     _lexemeStartCharNumber = _charNumber;
+                     _lexemeStartLineNumber = _lineNumber;
+                 }
+
+                 // Add the incoming character to the lexeme
+                 lexemeValue.append(Character.toString(_currentChar));
+                 _charNumber++;
+
+                 // If we have hit the END_STRING_CONST character,
+                 // it is time to move to the STRING_CONST state
+                 if (normalizedChar == END_STRING_CONST) {
+                     _currentState = State.STRING_CONST;
+                 }
+             }
+             // Check if there is a next state, if not, we've hit a dead end
+             // and need to determine next steps. is this state accepting?
+             // If it isn't, we certainly have read a syntactically
+             // incorrect line of code
+             else if (
+                 getStateTable().containsKey(_currentState) &&
+                 getStateTable().get(_currentState).containsKey(normalizedChar)
+             ) {
+
+                 // Has next state, get it!
+                 _currentState = getStateTable()
+                     .get(_currentState)
+                     .get(normalizedChar);
+
+                 // If this is the start of a new lexeme, then
+                 // mark the starting line and char numbers of this
+                 // lexeme
+                 if (lexemeValue.isEmpty()) {
+                     _lexemeStartCharNumber = _charNumber;
+                     _lexemeStartLineNumber = _lineNumber;
+                 }
+
+                 // Add the character to the lexeme
+                 lexemeValue.append(Character.toString(_currentChar));
+                 _charNumber++;
+             }
+             // State is an accepting state, formulate the new lexeme
+             else if (_currentState.isAccepting()) {
+
+                 // Push the last character back onto the pushback
+                 // reader
+                 try {
+                     _fileReader.unread(_currentChar);
+                 } catch (IOException e) {
+                     throw new SyntaxErrorException(
+                         String.format(
+                             "Line %d Char %d - I/O Error",
+                             getLineNumber(),
+                             getCharacterNumber()
+                         )
+                     );
+                 }
+
+                 // If the character is a new line, "back up
+                 // to the previous line"
+                 if (_currentChar == NEWLINE) {
+                     _lineNumber--;
+                 }
+
+                 // Get the current value of the lexeme
+                 lexeme = lexemeValue.toString();
+
+                 // Determine what identifier
+                 theSymbol = getSymbolTable().get(lexeme);
+
+                 // If the symbol was not in the symbol table, it is an
+                 // identifier and should be populated into the table
+                 if (theSymbol == null) {
+                     // If we're in the SYMBOL state, this must have been
+                     // an unknown symbol, so we can infer it to be a
+                     // new identifier
+                     if (_currentState == State.SYMBOL) {
+                         theSymbol = new Lexeme(
+                             lexeme,
+                             TerminalToken.IDENTIFIER
+                         );
+                     }
+                     // It's whitespace if we were in the WHITESPACE state
+                     else if (_currentState == State.WHITESPACE) {
+                         theSymbol = new Lexeme(
+                             lexeme,
+                             TerminalToken.WHITESPACE
+                         );
+                     }
+                     // It's a comment if we were in the COMMENT state
+                     else if (_currentState == State.COMMENT) {
+                         theSymbol = new Lexeme(
+                             lexeme,
+                             TerminalToken.COMMENT
+                         );
+                     }
+                     // It's a STRING_CONST if we were in the STRING_CONST
+                     // state
+                     else if (_currentState == State.STRING_CONST) {
+                         theSymbol = new Lexeme(
+                             lexeme,
+                             TerminalToken.STRING_CONST
+                         );
+                     }
+                     // It's a NUMBER if we were in the NUMBER state
+                     else if (_currentState == State.NUMBER) {
+                         theSymbol = new Lexeme(
+                             lexeme,
+                             TerminalToken.NUMBER
+                         );
+                     }
+
+                     // Insert the new symbol into the symbol table
+                     getSymbolTable().putIfAbsent(lexeme, theSymbol);
+                 }
+
+                 // End the state transition loop if the tokenized
+                 // symbol is not a comment, string literal, or whitespace.
+                 // Otherwise, have the lexical analyzer throw this out
+                 // and continue to find the next lexeme
+                 if (
+                     _currentState != State.COMMENT &&
+                     _currentState != State.WHITESPACE
+                 ) {
+                     hasAcquiredSymbol = true;
+                 }
+
+                 // Clear old StringBuilder value
+                 lexemeValue = new StringBuilder();
+
+                 // Go back to START state
+                 _currentState = State.START;
+             }
+             // We've exhausted the buffer, it is now time to
+             // return to the program the END_OF_INPUT terminal
+             else if (_currentChar == EOF || _currentChar == EMPTY_BUF) {
+                 // Return the EOI terminal
+                 theSymbol = TerminalToken.END_OF_INPUT;
+
+                 // No longer any more lexemes to consume from the file
+                 _hasNextLexeme = false;
+
+                 // Exit the loop
+                 hasAcquiredSymbol = true;
+             } else {
+                 // Invalid syntax, print location of error
+                 throw new SyntaxErrorException(
+                     String.format(
+                         "Line %d, Char %d: Invalid Syntax",
+                         _lineNumber, _charNumber
+                     )
+                 );
+             }
+
+             // "Go to next line"
+             if (normalizedChar == NEWLINE) {
+                 _lineNumber++;
+                 _charNumber = 1;
+             }
+
+             // Read the next character in
+             try {
+                 _currentChar = _fileReader.read();
+             } catch (IOException e) {
+                 throw new SyntaxErrorException(
+                     String.format(
+                         "Line %d Char %d - I/O Error",
+                         getLineNumber(),
+                         getCharacterNumber()
+                     )
+                 );
+             }
+         }
+
+         return theSymbol;
+    }
+
+    /**
      * Get the Lexical Analyzer's symbol table
      *
      * @return the symbol table
@@ -227,220 +469,26 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
      *
      * @return true if there is another lexeme to return
      */
-    public boolean hasNextLexeme() {
+    public boolean hasNextSymbol() {
         return _hasNextLexeme;
     }
 
     /**
-     * Provides the next lexeme in the stream if there is another
-     * to return
+     * Returns the line number the lexical analyzer is currently on
      *
-     * @return the next lexeme
-     * @throws NoSuchElementException if there are no more lexemes to return
+     * @return the line number the lexical analyzer is currently on
      */
-     public Symbol nextLexeme() throws NoSuchElementException, IOException, SyntaxErrorException {
-         String lexeme;
-         Symbol theSymbol = null;
-         StringBuilder lexemeValue = new StringBuilder();
-         boolean hasAcquiredSymbol = false;
-
-         while (!hasAcquiredSymbol) {
-             // Read in the next character from the reader
-             int theChar = _fileReader.read();
-
-             // If the read-in char is EOF, we should stop running
-             if (theChar != EOF) {
-                 // Copy the read-in char so we can normalize it
-                 // if it is alphanumeric
-                 char normalizedChar = (char) theChar;
-
-                 // Normalize letters and numbers for the
-                 // state table
-                 if (Character.isDigit(normalizedChar)) {
-                     normalizedChar = DIGIT;
-                 } else if (Character.isLetter(normalizedChar)) {
-                     normalizedChar = LETTER;
-                 }
-
-                 // Handle the IN_COMMENT state, consume all
-                 // characters until we hit the character that
-                 // signals the end of a comment
-                 if (_currentState == State.IN_COMMENT) {
-                     // If this is the start of a new lexeme, then
-                     // mark the starting line and char numbers of this
-                     // lexeme
-                     if (lexemeValue.isEmpty()) {
-                         _lexemeStartCharNumber = _charNumber;
-                         _lexemeStartLineNumber = _lineNumber;
-                     }
-
-                     // Add the incoming character to the lexeme
-                     lexemeValue.append(Character.toString(theChar));
-                     _charNumber++;
-
-                     // If we have hit the END_COMMENT character,
-                     // it is time to move to the COMMENT state
-                     if (normalizedChar == END_COMMENT) {
-                         _currentState = State.COMMENT;
-                     }
-                     // Handle the IN_STRING state, consume all
-                     // characters until we hit the character that
-                     // signals the end of a string const
-                 } else if (_currentState == State.IN_STRING) {
-                     // If this is the start of a new lexeme, then
-                     // mark the starting line and char numbers of this
-                     // lexeme
-                     if (lexemeValue.isEmpty()) {
-                         _lexemeStartCharNumber = _charNumber;
-                         _lexemeStartLineNumber = _lineNumber;
-                     }
-
-                     // Add the incoming character to the lexeme
-                     lexemeValue.append(Character.toString(theChar));
-                     _charNumber++;
-
-                     // If we have hit the END_STRING_CONST character,
-                     // it is time to move to the STRING_CONST state
-                     if (normalizedChar == END_STRING_CONST) {
-                         _currentState = State.STRING_CONST;
-                     }
-                 }
-                 // Check if there is a next state, if not, we've hit a dead end
-                 // and need to determine next steps. is this state accepting?
-                 // If it isn't, we certainly have read a syntactically
-                 // incorrect line of code
-                 else if (
-                         getStateTable().containsKey(_currentState) &&
-                                 getStateTable().get(_currentState).containsKey(normalizedChar)
-                 ) {
-                     // Has next state, get it!
-                     _currentState = getStateTable()
-                             .get(_currentState)
-                             .get(normalizedChar);
-
-                     // If this is the start of a new lexeme, then
-                     // mark the starting line and char numbers of this
-                     // lexeme
-                     if (lexemeValue.isEmpty()) {
-                         _lexemeStartCharNumber = _charNumber;
-                         _lexemeStartLineNumber = _lineNumber;
-                     }
-
-                     // Add the character to the lexeme
-                     lexemeValue.append(Character.toString(theChar));
-                     _charNumber++;
-                 } else if (_currentState.isAccepting()) {
-                     // Push the last character back onto the pushback
-                     // reader
-                     _fileReader.unread(theChar);
-
-                     // If the character is a new line, "back up
-                     // to the previous line"
-                     if (theChar == NEWLINE) {
-                         _lineNumber--;
-                     }
-
-                     // Get the current value of the lexeme
-                     lexeme = lexemeValue.toString();
-
-                     // Determine what identifier
-                     theSymbol = getSymbolTable().get(lexeme);
-
-                     // If the symbol was not in the symbol table, it is an
-                     // identifier and should be populated into the table
-                     if (theSymbol == null) {
-                         // If we're in the SYMBOL state, this must have been
-                         // an unknown symbol, so we can infer it to be a
-                         // new identifier
-                         if (_currentState == State.SYMBOL) {
-                             theSymbol = new Lexeme(
-                                     lexeme,
-                                     TerminalToken.IDENTIFIER
-                             );
-                         }
-                         // It's whitespace if we were in the WHITESPACE state
-                         else if (_currentState == State.WHITESPACE) {
-                             theSymbol = new Lexeme(
-                                     lexeme,
-                                     TerminalToken.WHITESPACE
-                             );
-                         }
-                         // It's a comment if we were in the COMMENT state
-                         else if (_currentState == State.COMMENT) {
-                             theSymbol = new Lexeme(
-                                     lexeme,
-                                     TerminalToken.COMMENT
-                             );
-                         }
-                         // It's a STRING_CONST if we were in the STRING_CONST
-                         // state
-                         else if (_currentState == State.STRING_CONST) {
-                             theSymbol = new Lexeme(
-                                     lexeme,
-                                     TerminalToken.STRING_CONST
-                             );
-                         }
-                         // It's a NUMBER if we were in the NUMBER state
-                         else if (_currentState == State.NUMBER) {
-                             theSymbol = new Lexeme(
-                                     lexeme,
-                                     TerminalToken.NUMBER
-                             );
-                         }
-
-                         // Insert the new symbol into the symbol table
-                         getSymbolTable().putIfAbsent(lexeme, theSymbol);
-                     }
-
-                     if (
-                         _currentState == State.WHITESPACE ||
-                         _currentState == State.COMMENT
-                     ) {
-                         theSymbol = null;
-                     }
-
-                     // Clear old StringBuilder value
-                     lexemeValue = new StringBuilder();
-
-                     // Go back to START state
-                     _currentState = State.START;
-
-                     hasAcquiredSymbol = true;
-                 } else {
-                     // Invalid syntax, print location of error
-                     throw new SyntaxErrorException(
-                             String.format(
-                                     "Line %d, Char %d: Invalid Syntax",
-                                     _lineNumber, _charNumber
-                             )
-                     );
-                 }
-
-                 // "Go to next line"
-                 if (normalizedChar == NEWLINE) {
-                     _lineNumber++;
-                     _charNumber = 1;
-                 }
-             } else {
-                 _hasNextLexeme = false;
-                 hasAcquiredSymbol = true;
-             }
-         }
-
-         if (theSymbol == null) {
-             throw new NoSuchElementException();
-         }
-
-         return theSymbol;
+    public int getLineNumber() {
+        return _lineNumber;
     }
 
     /**
-     * Returns the stack of symbols that the lexical analyzer formulates
+     * Returns the character number the lexical analyzer is currently on
      *
-     * @return the stack of symbols that the lexical analyzer formulates
+     * @return the character number the lexical analyzer is currently on
      */
-    public ArrayDeque<Symbol> getSymbolStack() {
-         return _symbolQueue;
+    public int getCharacterNumber() {
+        return _charNumber;
     }
 
     /**
@@ -450,20 +498,5 @@ public class LexicalAnalyzer implements Iterable<Symbol> {
      */
     private HashMap<State, HashMap<Character, State>> getStateTable() {
         return _stateTable;
-    }
-
-    /**
-     * Add a new symbol into the "stream" of tokens
-     * (can be a Lexeme or a Token)
-     *
-     * @param symbolToAdd the symbol to add
-     */
-    private void queueSymbol(Symbol symbolToAdd) {
-        _symbolQueue.add(symbolToAdd);
-    }
-
-    @Override
-    public Iterator<Symbol> iterator() {
-        return _symbolQueue.iterator();
     }
 }

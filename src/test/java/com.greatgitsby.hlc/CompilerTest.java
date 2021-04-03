@@ -23,7 +23,7 @@ public class CompilerTest {
      * @throws IOException if there was a file error
      * @throws SyntaxErrorException if the code was syntactically invalid
      */
-    @ParameterizedTest(name = "Good Program {index}: {0}")
+    @ParameterizedTest(name = "Parser - Good Program {index}: {0}")
     @MethodSource("provideGoodProgramParserFilenames")
     void test_parser_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
         Assertions.assertTrue(
@@ -38,7 +38,7 @@ public class CompilerTest {
      *
      * @param filename the file to test
      */
-    @ParameterizedTest(name = "Bad Program {index}: {0}")
+    @ParameterizedTest(name = "Parser - Bad Program {index}: {0}")
     @MethodSource("provideBadProgramParserFilenames")
     void test_parser_BadPrograms(String filename) {
         Assertions.assertThrows(SyntaxErrorException.class, () -> {
@@ -65,8 +65,8 @@ public class CompilerTest {
     void test_lexer_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
         LexicalAnalyzer l = new LexicalAnalyzer(resolveGoodLexerFile(filename));
 
-        while (l.hasNextLexeme()) {
-            System.out.println(l.nextLexeme());
+        while (l.hasNextSymbol()) {
+            System.out.println(l.nextSymbol());
         }
 
         Assertions.assertTrue(true);

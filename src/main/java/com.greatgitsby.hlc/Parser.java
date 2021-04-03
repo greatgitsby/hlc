@@ -4,9 +4,15 @@ import java.io.*;
 import java.util.*;
 
 /**
- * TODO Description
+ * Parser
+ *
+ * Defines the behavior of the parser for the HansenLite compiler.
+ * It is the following stage, processing the stream of tokens from
+ * the LexicalAnalyzer. As well, it will perform code generation during the
+ * parse stage in the form of ARM assembly.
  */
 public class Parser {
+    // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
     private final Map<Symbol, Map<Symbol, List<Symbol>>> _parseTable;
     private final Stack<Symbol> _labelStack;
@@ -14,6 +20,7 @@ public class Parser {
     private final Stack<Symbol> _operatorStack;
     private final Stack<Symbol> _parseStack;
 
+    // Parser mutable internal state
     private Symbol _currentLexerSymbol;
     private Symbol _currentParserSymbol;
 
@@ -34,36 +41,35 @@ public class Parser {
     }
 
     /**
-     * TODO Description
+     * Determines if the syntax from the stream of symbols from the
+     * LexicalAnalyzer is valid or not
+     *
+     * @return true if the syntax is valid. An exception will be thrown if
+     *         the parser encountered a syntax error
      */
     public boolean isValidSyntax() throws SyntaxErrorException, IOException {
-        boolean isValidSyntax = true;
-
         // Push the end symbol ($) onto the parse stack
         getParseStack().push(TerminalToken.END_OF_INPUT);
+
+        // Push the entry point into the grammar, in this case the
+        // STATEMENT non-terminal, onto the parse stack
         getParseStack().push(NonTerminalToken.STATEMENT);
 
-        while (
-            getLexicalAnalyzer().hasNextLexeme() &&
-            !getParseStack().isEmpty()
-        ) {
-            // Set the current lexer symbol to the top of the symbol stack
-            setTopOfLexerStack(getLexicalAnalyzer().nextLexeme());
+        // Get the first symbol from the lexical analyzer
+        setCurrentLexerSymbol(getLexicalAnalyzer().nextSymbol());
 
+        // Process symbols on the parse stack until the stack is empty
+        while (!getParseStack().isEmpty()) {
             // Get the top of parse stack
             setTopOfParseStack(getParseStack().peek());
 
             // Tell the symbol on the top of the parse stack to
             // do its thing. If it does not succeed, it is due to a syntax
-            // error. Print where the error occurred
+            // error
             getTopOfParseStack().doTheThing(this);
         }
 
-        if (!getLexicalAnalyzer().hasNextLexeme()) {
-            isValidSyntax = false;
-        }
-
-        return isValidSyntax;
+        return true;
     }
 
     /**
@@ -71,10 +77,15 @@ public class Parser {
      *
      * @return the current lexer symbol
      */
-    public Symbol getTopOfLexerStack() {
+    public Symbol getCurrentLexerSymbol() {
         return _currentLexerSymbol;
     }
 
+    /**
+     * Returns the current top of stack of the parser symbol
+     *
+     * @return the current top of stack of the parser symbol
+     */
     public Symbol getTopOfParseStack() {
         return _currentParserSymbol;
     }
@@ -127,10 +138,10 @@ public class Parser {
     /**
      * Sets the new top of lexer stack
      *
-     * @param theNewTopOfStack the new top of lexer stack
+     * @param theNewSymbol the new top of lexer stack
      */
-    public void setTopOfLexerStack(Symbol theNewTopOfStack) {
-        _currentLexerSymbol = theNewTopOfStack;
+    public void setCurrentLexerSymbol(Symbol theNewSymbol) {
+        _currentLexerSymbol = theNewSymbol;
     }
 
     /**
@@ -143,12 +154,17 @@ public class Parser {
     }
 
     /**
-     * TODO Description
+     * Build the parser table as defined by the HansenLite grammar.
      *
-     * @return the parse table
+     * This function is very verbose. Above each internal table entry
+     * is the associated grammar entry in the language.
+     *
+     * @return the completed parse table
      */
     private Map<Symbol, Map<Symbol, List<Symbol>>> buildParseTable() {
         return new HashMap<>() {{
+
+            // STATEMENT
             put(NonTerminalToken.STATEMENT, new HashMap<>() {{
 
                 // statement -> identifier assignment_operator expression
@@ -158,7 +174,8 @@ public class Parser {
                     add(NonTerminalToken.EXPRESSION);
                 }});
 
-                // statement -> if boolean_expression then statement else_clause
+                // statement ->
+                //     if boolean_expression then statement else_clause
                 put(TerminalToken.IF, new ArrayList<>() {{
                     add(TerminalToken.IF);
                     add(NonTerminalToken.BOOLEAN_EXPRESSION);
@@ -209,6 +226,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
+            // ELSE_CLAUSE
             put(NonTerminalToken.ELSE_CLAUSE, new HashMap<>() {{
 
                 // else_clause -> else statement
@@ -230,6 +248,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
+            // STATEMENT_LIST
             put(NonTerminalToken.STATEMENT_LIST, new HashMap<>() {{
 
                 // statement_list -> statement sep_list
@@ -272,6 +291,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
+            // SEPARATED_LIST
             put(NonTerminalToken.SEPARATED_LIST, new HashMap<>() {{
 
                 // sep_list -> statement_sep statement sep_list
@@ -285,6 +305,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
+            // PRINT_EXPRESSION
             put(NonTerminalToken.PRINT_EXPRESSION, new HashMap<>() {{
 
                 // print_expression -> expression
@@ -327,6 +348,7 @@ public class Parser {
                 put(TerminalToken.END, new ArrayList<>());
             }});
 
+            // BOOLEAN_EXPRESSION
             put(NonTerminalToken.BOOLEAN_EXPRESSION, new HashMap<>() {{
 
                 // boolean_expression -> expression relational_op expression
@@ -366,6 +388,7 @@ public class Parser {
                 put(TerminalToken.DO, new ArrayList<>());
             }});
 
+            // EXPRESSION
             put(NonTerminalToken.EXPRESSION, new HashMap<>() {{
 
                 // expression -> term addition
@@ -425,6 +448,7 @@ public class Parser {
                 put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
             }});
 
+            // ADDITION
             put(NonTerminalToken.ADDITION, new HashMap<>() {{
 
                 // addition -> additive_op term addition
@@ -467,6 +491,7 @@ public class Parser {
                 put(TerminalToken.RIGHT_PAREN, new ArrayList<>());
             }});
 
+            // TERM
             put(NonTerminalToken.TERM, new HashMap<>() {{
 
                 // term -> factor multiplication
@@ -530,6 +555,7 @@ public class Parser {
                 put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>());
             }});
 
+            // MULTIPLICATION
             put(NonTerminalToken.MULTIPLICATION, new HashMap<>() {{
 
                 // multiplication -> multiplicative_op factor multiplication
@@ -576,6 +602,7 @@ public class Parser {
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>());
             }});
 
+            // FACTOR
             put(NonTerminalToken.FACTOR, new HashMap<>() {{
 
                 // factor -> identifier
@@ -637,8 +664,10 @@ public class Parser {
                 put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>());
             }});
 
+            // SIGNED_TERM
             put(NonTerminalToken.SIGNED_TERM, new HashMap<>() {{
 
+                // signed_term -> additive_op term
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
                     add(TerminalToken.ADDITIVE_OP);
                     add(NonTerminalToken.TERM);

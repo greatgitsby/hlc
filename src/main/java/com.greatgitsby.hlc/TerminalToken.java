@@ -55,6 +55,7 @@ public enum TerminalToken implements Symbol {
         // we know it matched the grammar description and can get the
         // next symbol from the lexical analyzer
         if (theParser.getTopOfParseStack().equals(theCurrentLexerSymbol)) {
+
             // Pop the top of parse stack
             theParser.getParseStack().pop();
 

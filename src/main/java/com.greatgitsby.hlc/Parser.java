@@ -29,16 +29,20 @@ public class Parser {
      * Construct a new Parser
      */
     public Parser(LexicalAnalyzer lexer) {
-        _lexicalAnalyzer = lexer;
 
+        // Initialize lexer in Parser
+        _lexicalAnalyzer = lexer;
         _currentLexerSymbol = null;
         _currentParserSymbol = null;
 
+        // Construct the parse table
+        _parseTable = buildParseTable();
+
+        // Initialize data structures
         _labelStack = new Stack<>();
         _operandStack = new Stack<>();
         _operatorStack = new Stack<>();
         _parseStack = new Stack<>();
-        _parseTable = buildParseTable();
     }
 
     /**

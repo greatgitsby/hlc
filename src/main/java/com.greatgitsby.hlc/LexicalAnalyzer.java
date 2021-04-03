@@ -49,19 +49,20 @@ public class LexicalAnalyzer {
     public LexicalAnalyzer(String filepath)
         throws IOException, IllegalArgumentException, SyntaxErrorException
     {
+        // Initialize internal state
+        _stateTable = new HashMap<>();
+        _currentState = State.START;
         _lineNumber = 0;
         _charNumber = 0;
+        _hasNextLexeme = true;
 
         // Create file and file reader
         _fileReader = new PushbackReader(
             new FileReader(new File(filepath).getAbsoluteFile())
         );
 
+        // Read in the first character from the file reader
         _currentChar = _fileReader.read();
-
-        _currentState = State.START;
-        _hasNextLexeme = true;
-        _stateTable = new HashMap<>();
 
         // Insert all of our reserved keywords as "symbols" in
         // our symbol table

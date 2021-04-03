@@ -130,6 +130,9 @@ public enum NonTerminalToken implements Symbol {
                 }
             }
 
+            // Append the TOS that was received
+            expected.append(" - Got ").append(theParser.getTopOfParseStack());
+
             // Throw the error with the expected string
             throw new SyntaxErrorException(expected.toString());
         }

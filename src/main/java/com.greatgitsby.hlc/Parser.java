@@ -109,6 +109,15 @@ public class Parser {
     }
 
     /**
+     * Returns the label stack of this Parser
+     *
+     * @return the label stack of this Parser
+     */
+    public Stack<Symbol> getLabelStack() {
+        return _labelStack;
+    }
+
+    /**
      * Returns the operand stack of this Parser
      *
      * @return the operand stack of this Parser

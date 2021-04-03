@@ -6,28 +6,28 @@ package com.greatgitsby.hlc;
  * Represents the set of terminal tokens in the HansenLite language
  */
 public enum TerminalToken implements Symbol {
-    VARIABLE,
+    ADDITIVE_OP,
+    ASSIGNMENT_OP,
+    BEGIN,
+    COMMENT,
+    DO,
+    ELSE,
+    END,
+    END_OF_INPUT,
     IDENTIFIER,
+    IF,
+    LEFT_PAREN,
+    MULTIPLICATIVE_OP,
     NUMBER,
     PRINT,
-    IF,
-    THEN,
-    ELSE,
-    WHILE,
-    DO,
-    BEGIN,
-    END,
-    STRING_CONST,
-    MULTIPLICATIVE_OP,
     RELATIONAL_OP,
-    ASSIGNMENT_OP,
-    ADDITIVE_OP,
-    STATEMENT_SEP,
-    LEFT_PAREN,
     RIGHT_PAREN,
-    WHITESPACE,
-    COMMENT,
-    END_OF_INPUT;
+    STATEMENT_SEP,
+    STRING_CONST,
+    THEN,
+    VARIABLE,
+    WHILE,
+    WHITESPACE;
 
     /**
      * {@inheritDoc}

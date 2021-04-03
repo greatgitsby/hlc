@@ -10,33 +10,31 @@ import java.util.*;
  * to the Hansen programming language. It is a table-driven
  * finite state automata backed by a symbol table that remembers
  * variables from the input file and reserved keywords of the
- * Hansen language. Once complete, a queue of Symbols is left
- * in the _symbols deque for the programmer to utilize
- * (in preparation of passing to a Parser...)
+ * Hansen language
  */
 public class LexicalAnalyzer {
+    // Private immutable instance variables
     private final HashMap<State, HashMap<Character, State>> _stateTable;
     private final HashMap<String, Symbol> _symbolTable;
-    private State _currentState;
-    private PushbackReader _fileReader;
+    private final PushbackReader _fileReader;
 
+    // Private mutable instance variables
+    private State _currentState;
     private int _lineNumber;
     private int _charNumber;
-    private int _lexemeStartLineNumber;
-    private int _lexemeStartCharNumber;
     private boolean _hasNextLexeme;
     private int _currentChar;
 
     // Static variables
-    private static final char CARRIAGE_RETURN = '\r';
-    private static final char END_COMMENT = '}';
-    private static final char END_STRING_CONST = '"';
-    private static final int  EOF = -1;
-    private static final int EMPTY_BUF = 65535;
-    private static final char DIGIT = '0';
-    private static final char LETTER = 'a';
-    private static final char NEWLINE = '\n';
-    private static final char TAB = '\t';
+    private static final char CARRIAGE_RETURN   = '\r';
+    private static final char END_COMMENT       = '}';
+    private static final char END_STRING_CONST  = '"';
+    private static final int  EOF               = -1;
+    private static final int  EMPTY_BUF         = 65535;
+    private static final char DIGIT             = '0';
+    private static final char LETTER            = 'a';
+    private static final char NEWLINE           = '\n';
+    private static final char TAB               = '\t';
 
     /**
      * Constructs a new Lexical Analyzer, parsing an input file
@@ -52,8 +50,6 @@ public class LexicalAnalyzer {
     {
         _lineNumber = 0;
         _charNumber = 0;
-        _lexemeStartCharNumber = 0;
-        _lexemeStartLineNumber = 0;
 
         // Create file and file reader
         _fileReader = new PushbackReader(
@@ -256,14 +252,6 @@ public class LexicalAnalyzer {
              // signals the end of a comment
              if (_currentState == State.IN_COMMENT) {
 
-                 // If this is the start of a new lexeme, then
-                 // mark the starting line and char numbers of this
-                 // lexeme
-                 if (lexemeValue.isEmpty()) {
-                     _lexemeStartCharNumber = _charNumber;
-                     _lexemeStartLineNumber = _lineNumber;
-                 }
-
                  // Add the incoming character to the lexeme
                  lexemeValue.append(Character.toString(_currentChar));
                  _charNumber++;
@@ -274,14 +262,6 @@ public class LexicalAnalyzer {
                      _currentState = State.COMMENT;
                  }
              } else if (_currentState == State.IN_STRING) {
-
-                 // If this is the start of a new lexeme, then
-                 // mark the starting line and char numbers of this
-                 // lexeme
-                 if (lexemeValue.isEmpty()) {
-                     _lexemeStartCharNumber = _charNumber;
-                     _lexemeStartLineNumber = _lineNumber;
-                 }
 
                  // Add the incoming character to the lexeme
                  lexemeValue.append(Character.toString(_currentChar));
@@ -306,14 +286,6 @@ public class LexicalAnalyzer {
                  _currentState = getStateTable()
                      .get(_currentState)
                      .get(normalizedChar);
-
-                 // If this is the start of a new lexeme, then
-                 // mark the starting line and char numbers of this
-                 // lexeme
-                 if (lexemeValue.isEmpty()) {
-                     _lexemeStartCharNumber = _charNumber;
-                     _lexemeStartLineNumber = _lineNumber;
-                 }
 
                  // Add the character to the lexeme
                  lexemeValue.append(Character.toString(_currentChar));
@@ -351,6 +323,7 @@ public class LexicalAnalyzer {
                  // If the symbol was not in the symbol table, it is an
                  // identifier and should be populated into the table
                  if (theSymbol == null) {
+
                      // If we're in the SYMBOL state, this must have been
                      // an unknown symbol, so we can infer it to be a
                      // new identifier
@@ -414,6 +387,7 @@ public class LexicalAnalyzer {
              // We've exhausted the buffer, it is now time to
              // return to the program the END_OF_INPUT terminal
              else if (_currentChar == EOF || _currentChar == EMPTY_BUF) {
+
                  // Return the EOI terminal
                  theSymbol = TerminalToken.END_OF_INPUT;
 

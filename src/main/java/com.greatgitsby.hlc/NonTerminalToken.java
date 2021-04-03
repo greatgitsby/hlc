@@ -8,18 +8,18 @@ import java.util.*;
  * Represents the set of non-terminal tokens in the HansenLite language.
  */
 public enum NonTerminalToken implements Symbol {
-    STATEMENT,
-    ELSE_CLAUSE,
-    STATEMENT_LIST,
-    SEPARATED_LIST,
-    PRINT_EXPRESSION,
-    BOOLEAN_EXPRESSION,
-    EXPRESSION,
     ADDITION,
-    TERM,
-    MULTIPLICATION,
+    BOOLEAN_EXPRESSION,
+    ELSE_CLAUSE,
+    EXPRESSION,
     FACTOR,
-    SIGNED_TERM;
+    MULTIPLICATION,
+    PRINT_EXPRESSION,
+    SEPARATED_LIST,
+    SIGNED_TERM,
+    STATEMENT,
+    STATEMENT_LIST,
+    TERM;
 
     /**
      * {@inheritDoc}
@@ -88,8 +88,8 @@ public enum NonTerminalToken implements Symbol {
             expected.append(
                 String.format(
                     "Line %d Char %d - Expected ",
-                        theParser.getLexicalAnalyzer().getLineNumber(),
-                        theParser.getLexicalAnalyzer().getCharacterNumber()
+                    theParser.getLexicalAnalyzer().getLineNumber(),
+                    theParser.getLexicalAnalyzer().getCharacterNumber()
                 )
             );
 

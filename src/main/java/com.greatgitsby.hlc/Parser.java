@@ -12,6 +12,7 @@ import java.util.*;
  * parse stage in the form of ARM assembly.
  */
 public class Parser {
+
     // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
     private final Map<Symbol, Map<Symbol, List<Symbol>>> _parseTable;

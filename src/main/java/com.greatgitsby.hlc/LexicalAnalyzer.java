@@ -13,6 +13,7 @@ import java.util.*;
  * Hansen language
  */
 public class LexicalAnalyzer {
+
     // Private immutable instance variables
     private final HashMap<State, HashMap<Character, State>> _stateTable;
     private final HashMap<String, Symbol> _symbolTable;

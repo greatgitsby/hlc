@@ -8,6 +8,8 @@ package com.greatgitsby.hlc;
  * as interpreted file via the Lexical Analyzer
  */
 public class Lexeme implements Symbol {
+
+    // Private immutable instance variables
     private final String _value;
     private final TerminalToken _tokenType;
 

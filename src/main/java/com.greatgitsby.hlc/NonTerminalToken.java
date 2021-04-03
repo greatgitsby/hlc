@@ -26,6 +26,7 @@ public enum NonTerminalToken implements Symbol {
      */
     @Override
     public void doTheThing(Parser theParser) throws SyntaxErrorException {
+
         // Local variables
         Symbol currentLexerSymbol;
         Symbol nextPossibleSymbol;
@@ -63,6 +64,7 @@ public enum NonTerminalToken implements Symbol {
             theParser.getParseTable().get(theParser.getTopOfParseStack())
                 .containsKey(currentLexerSymbol)
         ) {
+
             // Get the symbols to push onto the stack
             theListOfSymbols = theParser.getParseTable()
                 .get(theParser.getTopOfParseStack())
@@ -84,6 +86,7 @@ public enum NonTerminalToken implements Symbol {
         // error occurred
         else {
             expected = new StringBuilder();
+
             // Output current line and char number
             expected.append(
                 String.format(

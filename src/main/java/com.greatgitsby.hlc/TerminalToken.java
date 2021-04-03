@@ -34,6 +34,7 @@ public enum TerminalToken implements Symbol {
      */
     @Override
     public void doTheThing(Parser theParser) throws SyntaxErrorException {
+
         // Local variables
         Symbol theCurrentLexerSymbol;
 

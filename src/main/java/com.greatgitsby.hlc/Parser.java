@@ -1,5 +1,6 @@
 package com.greatgitsby.hlc;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -35,7 +36,7 @@ public class Parser {
     /**
      * TODO Description
      */
-    public boolean isValidSyntax() throws SyntaxErrorException {
+    public boolean isValidSyntax() throws SyntaxErrorException, IOException {
         boolean isValidSyntax = true;
 
         // Push the end symbol ($) onto the parse stack
@@ -43,11 +44,11 @@ public class Parser {
         getParseStack().push(NonTerminalToken.STATEMENT);
 
         while (
-            !getLexicalAnalyzer().getSymbolStack().isEmpty() &&
+            getLexicalAnalyzer().hasNextLexeme() &&
             !getParseStack().isEmpty()
         ) {
             // Set the current lexer symbol to the top of the symbol stack
-            setTopOfLexerStack(getLexicalAnalyzer().getSymbolStack().peek());
+            setTopOfLexerStack(getLexicalAnalyzer().nextLexeme());
 
             // Get the top of parse stack
             setTopOfParseStack(getParseStack().peek());
@@ -58,7 +59,7 @@ public class Parser {
             getTopOfParseStack().doTheThing(this);
         }
 
-        if (!getLexicalAnalyzer().getSymbolStack().isEmpty()) {
+        if (!getLexicalAnalyzer().hasNextLexeme()) {
             isValidSyntax = false;
         }
 

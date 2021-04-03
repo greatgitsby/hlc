@@ -53,6 +53,25 @@ public class CompilerTest {
         });
     }
 
+    /**
+     * Test a program file against the Parser
+     *
+     * @param filename the file to test
+     * @throws IOException if there was a file error
+     * @throws SyntaxErrorException if the code was syntactically invalid
+     */
+    @ParameterizedTest(name = "Lexer - Good Program {index}: {0}")
+    @MethodSource("provideGoodProgramLexerFilenames")
+    void test_lexer_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
+        LexicalAnalyzer l = new LexicalAnalyzer(resolveGoodLexerFile(filename));
+
+        while (l.hasNextLexeme()) {
+            System.out.println(l.nextLexeme());
+        }
+
+        Assertions.assertTrue(true);
+    }
+
     private static Stream<Arguments> getFilenamesAsArgsIn(String directory) {
         String[] programs;
         File programDirectory = new File(directory);
@@ -64,6 +83,10 @@ public class CompilerTest {
 
     private static String resolveFile(String filepath, String filename) {
         return String.format("%s/%s", filepath, filename);
+    }
+
+    private static String resolveGoodLexerFile(String filename) {
+        return resolveFile(GOOD_PROGRAMS_LEXER_DIR, filename);
     }
 
     private static String resolveGoodParserFile(String filename) {

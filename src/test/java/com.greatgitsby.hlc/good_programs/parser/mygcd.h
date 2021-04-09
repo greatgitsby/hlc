@@ -1,8 +1,8 @@
 {
-This is Euclid's method for computing the
+This is Euclid's method for computing the 
 Greatest Common Divisor
 }
-
+ 
 begin
     variable u;
     variable v;

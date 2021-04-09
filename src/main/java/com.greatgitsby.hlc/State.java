@@ -6,44 +6,54 @@ package com.greatgitsby.hlc;
  * Defines each state the Lexical Analyzer can be in
  */
 public enum State {
-    START() {
-        @Override
-        public boolean isAccepting() { return false; }
-    },
-    SYMBOL,
+    ADDITIVE_OP,
+    ASSIGNMENT_OP,
     COLON() {
         @Override
-        public boolean isAccepting() { return false; }
+        public boolean isAccepting() {
+            return false;
+        }
     },
-    ASSIGNMENT_OP,
-    NUMBER,
-    ADDITIVE_OP,
-    MULTIPLICATIVE_OP,
-    LEFT_PAREN,
-    RIGHT_PAREN,
-    STATEMENT_SEP,
-    WHITESPACE,
+    COMMENT,
     EQUAL_TO,
-    NOT_EQUAL_TO,
     GREATER_THAN,
     GREATER_THAN_EQUAL_TO,
-    LESS_THAN,
-    LESS_THAN_EQUAL_TO,
     IN_COMMENT() {
         @Override
-        public boolean isAccepting() { return false; }
+        public boolean isAccepting() {
+            return false;
+        }
     },
     IN_STRING() {
         @Override
-        public boolean isAccepting() { return false; }
+        public boolean isAccepting() {
+            return false;
+        }
     },
-    COMMENT,
-    STRING_CONST;
+    LEFT_PAREN,
+    LESS_THAN,
+    LESS_THAN_EQUAL_TO,
+    MULTIPLICATIVE_OP,
+    NOT_EQUAL_TO,
+    NUMBER,
+    RIGHT_PAREN,
+    START() {
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    },
+    STATEMENT_SEP,
+    STRING_CONST,
+    SYMBOL,
+    WHITESPACE;
 
     /**
      * Determines if the State is accepting
      *
      * @return true if the State is accepting
      */
-    public boolean isAccepting() { return true; }
+    public boolean isAccepting() {
+        return true;
+    }
 }

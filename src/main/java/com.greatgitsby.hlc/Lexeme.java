@@ -8,8 +8,10 @@ package com.greatgitsby.hlc;
  * as interpreted file via the Lexical Analyzer
  */
 public class Lexeme implements Symbol {
+
+    // Private immutable instance variables
     private final String _value;
-    private final Token _tokenType;
+    private final TerminalToken _tokenType;
 
     /**
      * Constructs a new Lexeme
@@ -17,7 +19,7 @@ public class Lexeme implements Symbol {
      * @param value the value from the file
      * @param tokenType the type of Lexeme this is
      */
-    public Lexeme(String value, Token tokenType) {
+    public Lexeme(String value, TerminalToken tokenType) {
         _value = value;
         _tokenType = tokenType;
     }
@@ -27,7 +29,7 @@ public class Lexeme implements Symbol {
      *
      * @return the token type of the lexeme
      */
-    public Token getTokenType() {
+    public TerminalToken getTokenType() {
         return _tokenType;
     }
 
@@ -35,7 +37,9 @@ public class Lexeme implements Symbol {
      * {@inheritDoc}
      */
     @Override
-    public void doTheThing() { }
+    public void doTheThing(Parser theParser)  throws SyntaxErrorException {
+        getTokenType().doTheThing(theParser);
+    }
 
     /**
      * Creates a string representation of this lexeme.

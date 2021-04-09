@@ -24,7 +24,7 @@ hs_err_pid*
 
 out/
 
-**/.DS_Store
+*/.DS_Store
 .gradle/
 gradle/
 gradlew

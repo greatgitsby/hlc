@@ -21,6 +21,7 @@ public class Parser {
     private final ArrayDeque<Symbol> _operatorStack;
     private final ArrayDeque<Symbol> _parseStack;
     private final Symbol[] _registers;
+    private final StringBuilder _asmCode;
 
     // Parser mutable internal state
     private Symbol _currentLexerSymbol;
@@ -50,6 +51,7 @@ public class Parser {
 
         // Create the register array
         _registers = new Symbol[LAST_REGISTER_LOC - FIRST_REGISTER_LOC];
+        _asmCode = new StringBuilder();
     }
 
     /**
@@ -61,11 +63,18 @@ public class Parser {
      */
     public boolean isValidSyntax() throws SyntaxErrorException, IOException {
         // Push the end symbol ($) onto the parse stack
+        getParseStack().push(Action.EPILOGUE);
+
+        // Push the end symbol ($) onto the parse stack
         getParseStack().push(TerminalToken.END_OF_INPUT);
 
         // Push the entry point into the grammar, in this case the
         // STATEMENT non-terminal, onto the parse stack
         getParseStack().push(NonTerminalToken.STATEMENT);
+
+        // Push the entry point into the grammar, in this case the
+        // STATEMENT non-terminal, onto the parse stack
+        getParseStack().push(Action.PROLOGUE);
 
         // Get the first symbol from the lexical analyzer
         setCurrentLexerSymbol(getLexicalAnalyzer().nextSymbol());
@@ -154,6 +163,19 @@ public class Parser {
      */
     public ArrayDeque<Symbol> getParseStack() {
         return _parseStack;
+    }
+
+    /**
+     * Returns the output "stream" where the assembled code will go
+     *
+     * @return the output "stream" where the assembled code will go
+     */
+    public StringBuilder getOutput() {
+        return _asmCode;
+    }
+
+    public String dumpOutput() {
+        return _asmCode.toString();
     }
 
     /**

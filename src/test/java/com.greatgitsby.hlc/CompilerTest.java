@@ -17,6 +17,30 @@ import java.util.stream.Stream;
 public class CompilerTest {
 
     /**
+     * Test a program file against the full compiler experience
+     *
+     * @param filename the file to test
+     * @throws IOException if there was a file error
+     * @throws SyntaxErrorException if the code was syntactically invalid
+     */
+    @ParameterizedTest(name = "Compiler - Good Program {index}: {0}")
+    @MethodSource("provideGoodProgramCompilerFilenames")
+    void test_compiler_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
+        Parser p = new Parser(
+            new LexicalAnalyzer(resolveGoodParserFile(filename))
+        );
+
+        System.out.printf("--- PROGRAM %s ---------%n", filename);
+        System.out.printf("Is valid: %s%n", p.isValidSyntax());
+
+        System.out.printf("--------- OUTPUT ---------%n");
+        System.out.println(p.dumpOutput());
+        System.out.printf("--------- OUTPUT ---------%n");
+
+        Assertions.assertTrue(true);
+    }
+
+    /**
      * Test a program file against the Parser
      *
      * @param filename the file to test
@@ -93,6 +117,10 @@ public class CompilerTest {
         return resolveFile(GOOD_PROGRAMS_PARSER_DIR, filename);
     }
 
+    private static String resolveGoodCompilerFile(String filename) {
+        return resolveFile(GOOD_PROGRAMS_COMPILER_DIR, filename);
+    }
+
     private static String resolveBadParserFile(String filename) {
         return resolveFile(BAD_PROGRAMS_PARSER_DIR, filename);
     }
@@ -129,6 +157,15 @@ public class CompilerTest {
      *
      * @return a stream of filenames for good programs
      */
+    private static Stream<Arguments> provideGoodProgramCompilerFilenames() {
+        return getFilenamesAsArgsIn(GOOD_PROGRAMS_COMPILER_DIR);
+    }
+
+    /**
+     * Provide a stream of filenames for good programs
+     *
+     * @return a stream of filenames for good programs
+     */
     private static Stream<Arguments> provideBadProgramParserFilenames() {
         return getFilenamesAsArgsIn(BAD_PROGRAMS_PARSER_DIR);
     }
@@ -150,6 +187,9 @@ public class CompilerTest {
 
     private static final String GOOD_PROGRAMS_PARSER_DIR =
             GOOD_PROGRAM_DIR + "/parser";
+
+    private static final String GOOD_PROGRAMS_COMPILER_DIR =
+            GOOD_PROGRAM_DIR + "/compiler";
 
     private static final String BAD_PROGRAMS_LEXER_DIR =
             BAD_PROGRAM_DIR + "/lexer";

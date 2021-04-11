@@ -27,7 +27,7 @@ public class CompilerTest {
     @MethodSource("provideGoodProgramCompilerFilenames")
     void test_compiler_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
         Parser p = new Parser(
-            new LexicalAnalyzer(resolveGoodParserFile(filename))
+            new LexicalAnalyzer(resolveGoodCompilerFile(filename))
         );
 
         System.out.printf("--- PROGRAM %s ---------%n", filename);

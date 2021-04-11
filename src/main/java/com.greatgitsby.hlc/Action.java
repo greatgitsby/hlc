@@ -28,7 +28,8 @@ public enum Action implements Symbol {
         public void doTheThing(Parser theParser) {
             super.doTheThing(theParser);
 
-            System.out.printf("Pushed %s onto the operator stack", theParser.getCurrentLexerSymbol());
+            System.out.println(theParser.getParseStack().toString());
+            System.out.printf("Pushed %s onto the operator stack%n", theParser.getParseStack().peek());
 
             theParser.getOperatorStack().push(theParser.getCurrentLexerSymbol());
         }

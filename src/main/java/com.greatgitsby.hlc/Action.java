@@ -30,6 +30,8 @@ public enum Action implements Symbol {
      */
     @Override
     public void doTheThing(Parser theParser) {
+        theParser.getParseStack().pop();
+
         // TODO Implement default Action behavior
     }
 }

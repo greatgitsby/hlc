@@ -16,14 +16,18 @@ public class Parser {
     // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
     private final Map<Symbol, Map<Symbol, List<Symbol>>> _parseTable;
-    private final Stack<Symbol> _labelStack;
-    private final Stack<Symbol> _operandStack;
-    private final Stack<Symbol> _operatorStack;
-    private final Stack<Symbol> _parseStack;
+    private final ArrayDeque<Symbol> _labelStack;
+    private final ArrayDeque<Symbol> _operandStack;
+    private final ArrayDeque<Symbol> _operatorStack;
+    private final ArrayDeque<Symbol> _parseStack;
+    private final Symbol[] _registers;
 
     // Parser mutable internal state
     private Symbol _currentLexerSymbol;
     private Symbol _currentParserSymbol;
+
+    private static final int FIRST_REGISTER_LOC = 2;
+    private static final int LAST_REGISTER_LOC = 10;
 
     /**
      * Construct a new Parser
@@ -39,10 +43,13 @@ public class Parser {
         _parseTable = buildParseTable();
 
         // Initialize data structures
-        _labelStack = new Stack<>();
-        _operandStack = new Stack<>();
-        _operatorStack = new Stack<>();
-        _parseStack = new Stack<>();
+        _labelStack = new ArrayDeque<>();
+        _operandStack = new ArrayDeque<>();
+        _operatorStack = new ArrayDeque<>();
+        _parseStack = new ArrayDeque<>();
+
+        // Create the register array
+        _registers = new Symbol[LAST_REGISTER_LOC - FIRST_REGISTER_LOC];
     }
 
     /**
@@ -118,7 +125,7 @@ public class Parser {
      *
      * @return the label stack of this Parser
      */
-    public Stack<Symbol> getLabelStack() {
+    public ArrayDeque<Symbol> getLabelStack() {
         return _labelStack;
     }
 
@@ -127,7 +134,7 @@ public class Parser {
      *
      * @return the operand stack of this Parser
      */
-    public Stack<Symbol> getOperandStack() {
+    public ArrayDeque<Symbol> getOperandStack() {
         return _operandStack;
     }
 
@@ -136,7 +143,7 @@ public class Parser {
      *
      * @return the operator stack of this Parser
      */
-    public Stack<Symbol> getOperatorStack() {
+    public ArrayDeque<Symbol> getOperatorStack() {
         return _operatorStack;
     }
 
@@ -145,7 +152,7 @@ public class Parser {
      *
      * @return the parse stack of this Parser
      */
-    public Stack<Symbol> getParseStack() {
+    public ArrayDeque<Symbol> getParseStack() {
         return _parseStack;
     }
 
@@ -168,6 +175,15 @@ public class Parser {
     }
 
     /**
+     * TODO Description
+     *
+     * @return the register
+     */
+    public int getRegister() {
+        return 2;
+    }
+
+    /**
      * Build the parser table as defined by the HansenLite grammar.
      *
      * This function is very verbose. Above each internal table entry
@@ -186,30 +202,45 @@ public class Parser {
                     add(TerminalToken.IDENTIFIER);
                     add(TerminalToken.ASSIGNMENT_OP);
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.STORE);
                 }});
 
                 // statement ->
                 //     if boolean_expression then statement else_clause
                 put(TerminalToken.IF, new ArrayList<>() {{
                     add(TerminalToken.IF);
+                    add(Action.GEN_LABELS);
                     add(NonTerminalToken.BOOLEAN_EXPRESSION);
                     add(TerminalToken.THEN);
                     add(NonTerminalToken.STATEMENT);
+                    add(Action.GOTO_BEGIN);
+                    add(Action.END_LABEL);
                     add(NonTerminalToken.ELSE_CLAUSE);
+                    add(Action.BEGIN_LABEL);
+                    add(Action.POP_LABELS);
+                    add(Action.CLEAR_REGS);
                 }});
 
                 // statement -> while boolean_expression do statement
                 put(TerminalToken.WHILE, new ArrayList<>() {{
                     add(TerminalToken.WHILE);
+                    add(Action.GEN_LABELS);
+                    add(Action.BEGIN_LABEL);
+                    add(Action.CLEAR_REGS);
                     add(NonTerminalToken.BOOLEAN_EXPRESSION);
                     add(TerminalToken.DO);
                     add(NonTerminalToken.STATEMENT);
+                    add(Action.GOTO_BEGIN);
+                    add(Action.END_LABEL);
+                    add(Action.POP_LABELS);
+                    add(Action.CLEAR_REGS);
                 }});
 
                 // statement -> print print_expression
                 put(TerminalToken.PRINT, new ArrayList<>() {{
                     add(TerminalToken.PRINT);
                     add(NonTerminalToken.PRINT_EXPRESSION);
+                    add(Action.PRINT_PRINTF);
                 }});
 
                 // statement -> begin statement_list end
@@ -223,6 +254,7 @@ public class Parser {
                 put(TerminalToken.VARIABLE, new ArrayList<>() {{
                     add(TerminalToken.VARIABLE);
                     add(TerminalToken.IDENTIFIER);
+                    add(Action.DECLARE);
                 }});
 
                 // else is in follow(statement), won't push anything new
@@ -325,26 +357,32 @@ public class Parser {
                 // print_expression -> expression
                 put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.PRINT_IFMT);
                 }});
 
                 // print_expression -> expression
                 put(TerminalToken.LEFT_PAREN, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.PRINT_IFMT);
                 }});
 
                 // print_expression -> expression
                 put(TerminalToken.NUMBER, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.PRINT_IFMT);
                 }});
 
                 // print_expression -> expression
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.PRINT_IFMT);
                 }});
 
                 // print_expression -> string_const
                 put(TerminalToken.STRING_CONST, new ArrayList<>() {{
                     add(TerminalToken.STRING_CONST);
+                    add(Action.LOAD);
+                    add(Action.PRINT_SFMT);
                 }});
 
                 // statement_sep is in follow(sep_list),
@@ -369,28 +407,36 @@ public class Parser {
                 put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
                     add(TerminalToken.RELATIONAL_OP);
+                    add(Action.PUSH_OP);
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.COMPUTE);
                 }});
 
                 // boolean_expression -> expression relational_op expression
                 put(TerminalToken.LEFT_PAREN, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
                     add(TerminalToken.RELATIONAL_OP);
+                    add(Action.PUSH_OP);
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.COMPUTE);
                 }});
 
                 // boolean_expression -> expression relational_op expression
                 put(TerminalToken.NUMBER, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
                     add(TerminalToken.RELATIONAL_OP);
+                    add(Action.PUSH_OP);
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.COMPUTE);
                 }});
 
                 // boolean_expression -> expression relational_op expression
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
                     add(TerminalToken.RELATIONAL_OP);
+                    add(Action.PUSH_OP);
                     add(NonTerminalToken.EXPRESSION);
+                    add(Action.COMPUTE);
                 }});
 
                 // then is in follow(boolean_expression),
@@ -468,7 +514,9 @@ public class Parser {
                 // addition -> additive_op term addition
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
                     add(TerminalToken.ADDITIVE_OP);
+                    add(Action.PUSH_OP);
                     add(NonTerminalToken.TERM);
+                    add(Action.COMPUTE);
                     add(NonTerminalToken.ADDITION);
                 }});
 
@@ -575,7 +623,9 @@ public class Parser {
                 // multiplication -> multiplicative_op factor multiplication
                 put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>() {{
                     add(TerminalToken.MULTIPLICATIVE_OP);
+                    add(Action.PUSH_OP);
                     add(NonTerminalToken.FACTOR);
+                    add(Action.COMPUTE);
                     add(NonTerminalToken.MULTIPLICATION);
                 }});
 
@@ -622,6 +672,7 @@ public class Parser {
                 // factor -> identifier
                 put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
                     add(TerminalToken.IDENTIFIER);
+                    add(Action.LOAD);
                 }});
 
                 // factor -> left_paren expression right_paren
@@ -634,6 +685,7 @@ public class Parser {
                 // factor -> number
                 put(TerminalToken.NUMBER, new ArrayList<>() {{
                     add(TerminalToken.NUMBER);
+                    add(Action.LOAD);
                 }});
 
                 // factor -> signed_term
@@ -684,7 +736,9 @@ public class Parser {
                 // signed_term -> additive_op term
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
                     add(TerminalToken.ADDITIVE_OP);
+                    add(Action.PUSH_OP);
                     add(NonTerminalToken.TERM);
+                    add(Action.SIGN);
                 }});
             }});
         }};

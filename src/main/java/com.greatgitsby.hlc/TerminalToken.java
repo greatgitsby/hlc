@@ -62,8 +62,11 @@ public enum TerminalToken implements Symbol {
     STRING_CONST() {
         @Override
         public void doTheThing(Parser theParser) throws SyntaxErrorException {
+            // TODO Do I do this here?
             theParser.getStringConstants().putIfAbsent(theParser.getCurrentLexeme().getValue(), theParser.getStringConstants().size());
+
             System.out.println(theParser.getStringConstants());
+
             super.doTheThing(theParser);
         }
     },

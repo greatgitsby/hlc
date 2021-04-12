@@ -31,6 +31,7 @@ public class Parser {
     private Lexeme _currentLexeme;
     private Symbol _currentParserSymbol;
     private int _numVars;
+    private int _numLabels;
 
     /**
      * Construct a new Parser
@@ -42,6 +43,7 @@ public class Parser {
         _currentLexeme = null;
         _currentParserSymbol = null;
         _numVars = 0;
+        _numLabels = 0;
 
         // Construct the parse table
         _parseTable = buildParseTable();
@@ -253,6 +255,10 @@ public class Parser {
     }
 
     public int incrementVariableNumber() {
+        return ++_numVars;
+    }
+
+    public int incrementNumLabels() {
         return ++_numVars;
     }
 

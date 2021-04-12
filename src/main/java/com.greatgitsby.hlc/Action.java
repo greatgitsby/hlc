@@ -78,7 +78,7 @@ public enum Action implements Symbol {
         public void doTheThing(Parser theParser) {
             super.doTheThing(theParser);
             theParser.getLabelStack().push(
-                theParser.getLabelStack().size() + 1
+                theParser.incrementNumLabels()
             );
         }
     },

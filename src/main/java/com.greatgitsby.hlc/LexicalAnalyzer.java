@@ -367,7 +367,9 @@ public class LexicalAnalyzer {
                      // Initialize as "not declared"
                      Symbol theSymbol = new Symbol(theLexeme, -1);
 
-                     getSymbolTable().put(lexeme, theSymbol);
+                     if (_currentState == State.SYMBOL) {
+                         getSymbolTable().putIfAbsent(lexeme, theSymbol);
+                     }
                  } else {
                      theLexeme = new Lexeme(
                          lexeme,

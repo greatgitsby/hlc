@@ -228,6 +228,8 @@ public class Parser {
                 _registers[i] = theSymbol;
                 register = i += FIRST_REGISTER_LOC;
 
+                theSymbol.setRegister(register);
+
                 // TODO Add LOAD action onto parse stack
                 if (theSymbol.getLexeme().getTokenType() == TerminalToken.NUMBER) {
                     emitToOutput(String.format("\tmov r%d, #%s", register, theSymbol.getLexeme().getValue()));
@@ -265,7 +267,8 @@ public class Parser {
     }
 
     public int incrementVariableNumber() {
-        return ++_numVars;
+        _numVars++;
+        return _numVars;
     }
 
     public int incrementNumLabels() {

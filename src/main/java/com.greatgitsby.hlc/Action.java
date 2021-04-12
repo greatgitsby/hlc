@@ -67,7 +67,7 @@ public enum Action implements Token {
             super.doTheThing(theParser);
 
             theParser.emitToOutput(
-                    String.format("end%d:", theParser.getLabelStack().peek())
+                String.format("end%d:", theParser.getLabelStack().peek())
             );
         }
     },
@@ -75,6 +75,7 @@ public enum Action implements Token {
         @Override
         public void doTheThing(Parser theParser) {
             super.doTheThing(theParser);
+
             theParser.getLabelStack().push(
                 theParser.incrementNumLabels()
             );
@@ -122,9 +123,10 @@ public enum Action implements Token {
 
             theParser.emitToOutput("\tpush { r0-r3, lr }");
 
-            // TODO Implement reg alloc and get the thing
+            Symbol theSymbolToPrint = theParser.getOperandStack().pop();
+            int register = theParser.getRegister(theSymbolToPrint);
 
-            theParser.emitToOutput(String.format("\tmov r1, r%d", 0));
+            theParser.emitToOutput(String.format("\tmov r1, r%d", register));
             theParser.emitToOutput("\tbl printf");
             theParser.emitToOutput("\tpop { r0-r3, lr }");
         }
@@ -157,8 +159,10 @@ public enum Action implements Token {
 
             lhs = theParser.getLexicalAnalyzer().getSymbolTable().get(lhs.getLexeme().getValue());
 
+            System.out.println(lhs.getVariableNumber());
+            System.out.println(rhs.getVariableNumber());
+
             int registerForRhs = theParser.getRegister(rhs);
-            int registerForLhs = theParser.getRegister(lhs);
 
             theParser.emitToOutput(
                 String.format("\tstr r%d, [fp, #%d]", registerForRhs, -4 * lhs.getVariableNumber())

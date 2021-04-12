@@ -3,13 +3,7 @@
 begin
     variable u;
 
-    u := 0;
+    u := 256;
 
-    while u < 30 do
-    begin
-       print u;
-       print "\n";
-       u := u+1
-    end
-
+    print u
 end

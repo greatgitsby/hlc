@@ -6,7 +6,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -36,6 +38,14 @@ public class CompilerTest {
         System.out.printf("--------- OUTPUT ---------%n");
         System.out.println(p.dumpOutput());
         System.out.printf("--------- OUTPUT ---------%n");
+
+        File f = new File(resolveGoodCompilerFile("out/" + filename.replace(".h", ".s")));
+
+        FileWriter w = new FileWriter(f);
+
+        w.write(p.dumpOutput());
+
+        w.close();
 
         Assertions.assertTrue(true);
     }
@@ -98,11 +108,18 @@ public class CompilerTest {
 
     private static Stream<Arguments> getFilenamesAsArgsIn(String directory) {
         String[] programs;
+        ArrayList<String> finalPrograms = new ArrayList<>();
         File programDirectory = new File(directory);
 
         programs = Arrays.stream(Objects.requireNonNull(programDirectory.list())).toArray(String[]::new);
 
-        return Arrays.stream(programs).map(Arguments::of);
+        for (String program : programs) {
+            if (!program.startsWith(".DS_Store") && !program.startsWith("out")) {
+                finalPrograms.add(program);
+            }
+        }
+
+        return Arrays.stream(finalPrograms.toArray(String[]::new)).map(Arguments::of);
     }
 
     private static String resolveFile(String filepath, String filename) {

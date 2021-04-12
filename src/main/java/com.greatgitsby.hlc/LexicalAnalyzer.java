@@ -17,7 +17,7 @@ public class LexicalAnalyzer {
     // Private immutable instance variables
     private final HashMap<State, HashMap<Character, State>> _stateTable;
     private final HashMap<String, TerminalToken>            _keywordTable;
-    private final HashMap<String, Lexeme>                   _symbolTable;
+    private final HashMap<String, Symbol>                   _symbolTable;
     private final PushbackReader                            _fileReader;
 
     // Private mutable instance variables
@@ -449,7 +449,7 @@ public class LexicalAnalyzer {
      *
      * @return the symbol table
      */
-    public HashMap<String, Lexeme> getSymbolTable() {
+    public HashMap<String, Symbol> getSymbolTable() {
         return _symbolTable;
     }
 

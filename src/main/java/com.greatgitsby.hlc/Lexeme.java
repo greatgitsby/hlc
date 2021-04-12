@@ -7,14 +7,11 @@ package com.greatgitsby.hlc;
  * token type as well as the value associated with it
  * as interpreted file via the Lexical Analyzer
  */
-public class Lexeme implements Symbol {
+public class Lexeme {
 
     // Private immutable instance variables
     private final String _value;
     private final TerminalToken _tokenType;
-
-    private int _varNum;
-    private int _register;
 
     /**
      * Constructs a new Lexeme
@@ -25,7 +22,6 @@ public class Lexeme implements Symbol {
     public Lexeme(String value, TerminalToken tokenType) {
         _value = value;
         _tokenType = tokenType;
-        _varNum = 0;
     }
 
     /**
@@ -33,36 +29,12 @@ public class Lexeme implements Symbol {
      *
      * @return the token type of the lexeme
      */
-    public TerminalToken getTokenType() {
+    public Token getTokenType() {
         return _tokenType;
-    }
-
-    public void setVariableNumber(int varNum) {
-        _varNum = varNum;
-    }
-
-    public void setRegister(int register) {
-        _register = register;
-    }
-
-    public int getRegister() {
-        return _register;
-    }
-
-    public int getVariableNumber() {
-        return _varNum;
     }
 
     public String getValue() {
         return _value;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void doTheThing(Parser theParser)  throws SyntaxErrorException {
-        getTokenType().doTheThing(theParser);
     }
 
     /**

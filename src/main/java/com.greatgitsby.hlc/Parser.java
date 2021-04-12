@@ -17,19 +17,19 @@ public class Parser {
 
     // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
-    private final Map<Symbol, Map<Symbol, List<Symbol>>> _parseTable;
+    private final Map<Token, Map<Token, List<Token>>> _parseTable;
     private final ArrayDeque<Integer> _labelStack;
-    private final ArrayDeque<Lexeme> _operandStack;
+    private final ArrayDeque<Symbol> _operandStack;
     private final ArrayDeque<Symbol> _operatorStack;
-    private final ArrayDeque<Symbol> _parseStack;
+    private final ArrayDeque<Token> _parseStack;
     private final Symbol[] _registers;
     private final StringBuilder _asmCode;
 
-    private final Map<String, Integer> _stringConstants;
+    private final Map<String, String> _stringConstants;
 
     // Parser mutable internal state
     private Lexeme _currentLexeme;
-    private Symbol _currentParserSymbol;
+    private Token _currentParserSymbol;
     private int _numVars;
     private int _numLabels;
 
@@ -114,7 +114,7 @@ public class Parser {
      *
      * @return the current top of stack of the parser symbol
      */
-    public Symbol getTopOfParseStack() {
+    public Token getTopOfParseStack() {
         return _currentParserSymbol;
     }
 
@@ -132,7 +132,7 @@ public class Parser {
      *
      * @return the parse table of this Parser
      */
-    public Map<Symbol, Map<Symbol, List<Symbol>>> getParseTable() {
+    public Map<Token, Map<Token, List<Token>>> getParseTable() {
         return _parseTable;
     }
 
@@ -150,7 +150,7 @@ public class Parser {
      *
      * @return the operand stack of this Parser
      */
-    public ArrayDeque<Lexeme> getOperandStack() {
+    public ArrayDeque<Symbol> getOperandStack() {
         return _operandStack;
     }
 
@@ -168,7 +168,7 @@ public class Parser {
      *
      * @return the parse stack of this Parser
      */
-    public ArrayDeque<Symbol> getParseStack() {
+    public ArrayDeque<Token> getParseStack() {
         return _parseStack;
     }
 
@@ -199,11 +199,11 @@ public class Parser {
      *
      * @param theNewTopOfStack the new top of parse stack
      */
-    public void setTopOfParseStack(Symbol theNewTopOfStack) {
+    public void setTopOfParseStack(Token theNewTopOfStack) {
         _currentParserSymbol = theNewTopOfStack;
     }
 
-    public Map<String, Integer> getStringConstants() {
+    public Map<String, String> getStringConstants() {
         return _stringConstants;
     }
 
@@ -212,7 +212,7 @@ public class Parser {
      *
      * @return the register, -1 if it could not provision
      */
-    public int getRegister(Lexeme theSymbol) {
+    public int getRegister(Symbol theSymbol) {
         boolean foundFree = false;
         int register = -1;
 
@@ -228,8 +228,8 @@ public class Parser {
                 register = i += FIRST_REGISTER_LOC;
 
                 // TODO Add LOAD action onto parse stack
-                if (theSymbol.getTokenType() == TerminalToken.NUMBER) {
-                    emitToOutput(String.format("\tldr r%d, =#%s", register, theSymbol.getValue()));
+                if (theSymbol.getLexeme().getTokenType() == TerminalToken.NUMBER) {
+                    emitToOutput(String.format("\tldr r%d, =#%s", register, theSymbol.getLexeme().getTokenType()));
                 } else {
                     emitToOutput(String.format("\tldr r%d, [fp, #%d]", register, -4 * theSymbol.getVariableNumber()));
                 }
@@ -241,6 +241,15 @@ public class Parser {
         theSymbol.setRegister(register);
 
         return register;
+    }
+
+    public void freeRegister(Symbol theSymbol) {
+        for (int i = 0; i < _registers.length; i++) {
+            if (_registers[i].equals(theSymbol)) {
+                _registers[i].setRegister(-1);
+                _registers[i] = null;
+            }
+        }
     }
 
     /**
@@ -276,7 +285,7 @@ public class Parser {
      *
      * @return the completed parse table
      */
-    private Map<Symbol, Map<Symbol, List<Symbol>>> buildParseTable() {
+    private Map<Token, Map<Token, List<Token>>> buildParseTable() {
         return new HashMap<>() {{
 
             // statement

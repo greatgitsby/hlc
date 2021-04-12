@@ -9,7 +9,7 @@ import java.util.Date;
  * will be interleaved into the stream of lexemes to manage the code
  * generation phase of the compiler
  */
-public enum Action implements Symbol {
+public enum Action implements Token {
     BEGIN_LABEL() {
         @Override
         public void doTheThing(Parser theParser) {
@@ -42,18 +42,18 @@ public enum Action implements Symbol {
         public void doTheThing(Parser theParser) {
             super.doTheThing(theParser);
 
-            Lexeme operand = theParser.getOperandStack().pop();
+            Symbol theOperand = theParser.getOperandStack().pop();
 
-            if (!theParser.getLexicalAnalyzer().getSymbolTable().containsKey(operand.getValue())) {
+            if (!theParser.getLexicalAnalyzer().getSymbolTable().containsKey(theOperand.getLexeme().getValue())) {
 
-                operand.setVariableNumber(theParser.incrementVariableNumber());
+                theOperand.setVariableNumber(theParser.incrementVariableNumber());
 
                 theParser
                     .getLexicalAnalyzer()
                     .getSymbolTable()
                     .put(
-                        operand.getValue(),
-                        operand
+                        theOperand.getLexeme().getValue(),
+                        theOperand
                     );
             } else {
                 // Throw error, multiple declaration
@@ -102,34 +102,7 @@ public enum Action implements Symbol {
             );
         }
     },
-    LOAD() {
-        @Override
-        public void doTheThing(Parser theParser) {
-            super.doTheThing(theParser);
-
-            Lexeme l = theParser.getOperandStack().pop();
-
-            // It's a number
-            if (l.getTokenType().equals(TerminalToken.NUMBER)) {
-                theParser.getOperandStack().push(l);
-            }
-            // It's a string const
-            else if (l.getTokenType().equals(TerminalToken.STRING_CONST)) {
-                theParser.getStringConstants().putIfAbsent(l.getValue(), theParser.getStringConstants().size() + 1);
-
-                theParser.getOperandStack().push(new Lexeme(
-                    String.format("string%d", theParser.getStringConstants().get(l.getValue())),
-                    TerminalToken.STRING_CONST
-                ));
-            }
-            // It's an identifier (local variable), push the thingy in the symbol table thingy
-            else {
-                theParser.getOperandStack().push(theParser.getLexicalAnalyzer().getSymbolTable().get(l.getValue()));
-            }
-
-            // TODO Do!
-        }
-    },
+    LOAD,
     POP_LABELS() {
         @Override
         public void doTheThing(Parser theParser) {
@@ -181,10 +154,10 @@ public enum Action implements Symbol {
             super.doTheThing(theParser);
             System.out.println(theParser.getOperandStack());
 
-            Lexeme rhs = theParser.getOperandStack().pop();
-            Lexeme lhs = theParser.getOperandStack().pop();
+            Symbol rhs = theParser.getOperandStack().pop();
+            Symbol lhs = theParser.getOperandStack().pop();
 
-            lhs = theParser.getLexicalAnalyzer().getSymbolTable().get(lhs.getValue());
+            lhs = theParser.getLexicalAnalyzer().getSymbolTable().get(lhs.getLexeme().getValue());
 
             int registerForRhs = theParser.getRegister(rhs);
             int registerForLhs = theParser.getRegister(lhs);

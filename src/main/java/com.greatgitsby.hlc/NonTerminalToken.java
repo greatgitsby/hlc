@@ -7,7 +7,7 @@ import java.util.*;
  *
  * Represents the set of non-terminal tokens in the HansenLite language.
  */
-public enum NonTerminalToken implements Symbol {
+public enum NonTerminalToken implements Token {
     ADDITION,
     BOOLEAN_EXPRESSION,
     ELSE_CLAUSE,
@@ -28,13 +28,13 @@ public enum NonTerminalToken implements Symbol {
     public void doTheThing(Parser theParser) throws SyntaxErrorException {
 
         // Local variables
-        Symbol currentLexerSymbol;
-        Symbol nextPossibleSymbol;
+        Token currentLexerSymbol;
+        Token nextPossibleSymbol;
         StringBuilder expected;
-        List<Symbol> theListOfSymbols;
-        ListIterator<Symbol> listIterator;
-        Set<Symbol> possibleSymbols;
-        Iterator<Symbol> possibleSymbolsIterator;
+        List<Token> theListOfSymbols;
+        ListIterator<Token> listIterator;
+        Set<Token> possibleSymbols;
+        Iterator<Token> possibleSymbolsIterator;
 
         // Pop the TOS off the parse stack
         theParser.getParseStack().pop();

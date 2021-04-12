@@ -16,15 +16,16 @@ public class LexicalAnalyzer {
 
     // Private immutable instance variables
     private final HashMap<State, HashMap<Character, State>> _stateTable;
-    private final HashMap<String, Symbol> _symbolTable;
-    private final PushbackReader _fileReader;
+    private final HashMap<String, TerminalToken>            _keywordTable;
+    private final HashMap<String, Lexeme>                   _symbolTable;
+    private final PushbackReader                            _fileReader;
 
     // Private mutable instance variables
-    private State _currentState;
-    private int _lineNumber;
-    private int _charNumber;
+    private State   _currentState;
+    private int     _lineNumber;
+    private int     _charNumber;
     private boolean _hasNextLexeme;
-    private int _currentChar;
+    private int     _currentChar;
 
     // Static variables
     private static final char CARRIAGE_RETURN   = '\r';
@@ -51,6 +52,7 @@ public class LexicalAnalyzer {
     {
         // Initialize internal state
         _stateTable = new HashMap<>();
+        _symbolTable = new HashMap<>();
         _currentState = State.START;
         _lineNumber = 0;
         _charNumber = 0;
@@ -66,7 +68,7 @@ public class LexicalAnalyzer {
 
         // Insert all of our reserved keywords as "symbols" in
         // our symbol table
-        _symbolTable = new HashMap<>() {{
+        _keywordTable = new HashMap<>() {{
             put("variable", TerminalToken.VARIABLE);
             put("print", TerminalToken.PRINT);
             put("if", TerminalToken.IF);
@@ -219,16 +221,16 @@ public class LexicalAnalyzer {
      * @return the next symbol
      * @throws NoSuchElementException if there are no more lexemes to return
      */
-     public Symbol nextSymbol() throws SyntaxErrorException {
+     public Lexeme nextSymbol() throws SyntaxErrorException {
          // Local variables
-         Symbol theSymbol;
+         Lexeme theLexeme;
          StringBuilder lexemeValue;
          String lexeme;
          boolean hasAcquiredSymbol;
          char normalizedChar;
 
          // Initialize locals
-         theSymbol = null;
+         theLexeme = null;
          lexemeValue = new StringBuilder();
          hasAcquiredSymbol = false;
 
@@ -319,32 +321,29 @@ public class LexicalAnalyzer {
                  // Get the current value of the lexeme
                  lexeme = lexemeValue.toString();
 
-                 // Determine what identifier
-                 theSymbol = getSymbolTable().get(lexeme);
-
                  // If the symbol was not in the symbol table, it is an
                  // identifier and should be populated into the table
-                 if (theSymbol == null) {
+                 if (!getKeywordTable().containsKey(lexeme)) {
 
                      // If we're in the SYMBOL state, this must have been
                      // an unknown symbol, so we can infer it to be a
                      // new identifier
                      if (_currentState == State.SYMBOL) {
-                         theSymbol = new Lexeme(
+                         theLexeme = new Lexeme(
                              lexeme,
                              TerminalToken.IDENTIFIER
                          );
                      }
                      // It's whitespace if we were in the WHITESPACE state
                      else if (_currentState == State.WHITESPACE) {
-                         theSymbol = new Lexeme(
+                         theLexeme = new Lexeme(
                              lexeme,
                              TerminalToken.WHITESPACE
                          );
                      }
                      // It's a comment if we were in the COMMENT state
                      else if (_currentState == State.COMMENT) {
-                         theSymbol = new Lexeme(
+                         theLexeme = new Lexeme(
                              lexeme,
                              TerminalToken.COMMENT
                          );
@@ -352,21 +351,23 @@ public class LexicalAnalyzer {
                      // It's a STRING_CONST if we were in the STRING_CONST
                      // state
                      else if (_currentState == State.STRING_CONST) {
-                         theSymbol = new Lexeme(
+                         theLexeme = new Lexeme(
                              lexeme,
                              TerminalToken.STRING_CONST
                          );
                      }
                      // It's a NUMBER if we were in the NUMBER state
                      else if (_currentState == State.NUMBER) {
-                         theSymbol = new Lexeme(
+                         theLexeme = new Lexeme(
                              lexeme,
                              TerminalToken.NUMBER
                          );
                      }
-
-                     // Insert the new symbol into the symbol table
-                     getSymbolTable().putIfAbsent(lexeme, theSymbol);
+                 } else {
+                     theLexeme = new Lexeme(
+                         lexeme,
+                         getKeywordTable().get(lexeme)
+                     );
                  }
 
                  // End the state transition loop if the tokenized
@@ -391,7 +392,10 @@ public class LexicalAnalyzer {
              else if (_currentChar == EOF || _currentChar == EMPTY_BUF) {
 
                  // Return the EOI terminal
-                 theSymbol = TerminalToken.END_OF_INPUT;
+                 theLexeme = new Lexeme(
+                     TerminalToken.END_OF_INPUT.toString(),
+                     TerminalToken.END_OF_INPUT
+                 );
 
                  // No longer any more lexemes to consume from the file
                  _hasNextLexeme = false;
@@ -428,7 +432,16 @@ public class LexicalAnalyzer {
              }
          }
 
-         return theSymbol;
+         return theLexeme;
+    }
+
+    /**
+     * Get the Lexical Analyzer's keyword table
+     *
+     * @return the symbol table
+     */
+    private HashMap<String, TerminalToken> getKeywordTable() {
+        return _keywordTable;
     }
 
     /**
@@ -436,7 +449,7 @@ public class LexicalAnalyzer {
      *
      * @return the symbol table
      */
-    public HashMap<String, Symbol> getSymbolTable() {
+    public HashMap<String, Lexeme> getSymbolTable() {
         return _symbolTable;
     }
 

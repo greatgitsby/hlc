@@ -5,10 +5,11 @@ begin
 
     u := 0;
 
-    u := u + 1;
-    u := u * 1;
-    u := u / 1;
-    u := u * 1;
-    u := u + 1;
-    print u
+    while u < 30 do
+    begin
+       print u;
+       print "\n";
+       u := u+1
+    end
+
 end

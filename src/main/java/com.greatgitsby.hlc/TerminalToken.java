@@ -6,24 +6,67 @@ package com.greatgitsby.hlc;
  * Represents the set of terminal tokens in the HansenLite language
  */
 public enum TerminalToken implements Symbol {
-    ADDITIVE_OP,
-    ASSIGNMENT_OP,
+    ADDITIVE_OP() {
+        @Override
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
+            theParser.getOperatorStack().push(theParser.getCurrentLexeme());
+            super.doTheThing(theParser);
+        }
+    },
+    ASSIGNMENT_OP() {
+        @Override
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
+            theParser.getOperatorStack().push(theParser.getCurrentLexeme());
+            super.doTheThing(theParser);
+        }
+    },
     BEGIN,
     COMMENT,
     DO,
     ELSE,
     END,
     END_OF_INPUT,
-    IDENTIFIER,
+    IDENTIFIER() {
+        @Override
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
+            theParser.getOperandStack().push(theParser.getCurrentLexeme());
+            super.doTheThing(theParser);
+        }
+    },
     IF,
     LEFT_PAREN,
-    MULTIPLICATIVE_OP,
-    NUMBER,
+    MULTIPLICATIVE_OP() {
+        @Override
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
+            theParser.getOperatorStack().push(theParser.getCurrentLexeme());
+            super.doTheThing(theParser);
+        }
+    },
+    NUMBER() {
+        @Override
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
+            theParser.getOperandStack().push(theParser.getCurrentLexeme());
+            super.doTheThing(theParser);
+        }
+    },
     PRINT,
-    RELATIONAL_OP,
+    RELATIONAL_OP() {
+        @Override
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
+            theParser.getOperatorStack().push(theParser.getCurrentLexeme());
+            super.doTheThing(theParser);
+        }
+    },
     RIGHT_PAREN,
     STATEMENT_SEP,
-    STRING_CONST,
+    STRING_CONST() {
+        @Override
+        public void doTheThing(Parser theParser) throws SyntaxErrorException {
+            theParser.getStringConstants().putIfAbsent(theParser.getCurrentLexeme().getValue(), theParser.getStringConstants().size());
+            System.out.println(theParser.getStringConstants());
+            super.doTheThing(theParser);
+        }
+    },
     THEN,
     VARIABLE,
     WHILE,
@@ -39,18 +82,7 @@ public enum TerminalToken implements Symbol {
         Symbol theCurrentLexerSymbol;
 
         // Get the current parser lexer symbol
-        theCurrentLexerSymbol = theParser.getCurrentLexerSymbol();
-
-        // If this lexer symbol is a Lexeme, we must acquire the token
-        // type of the Lexeme
-        //
-        // TODO Achieve a better OOP approach when we start to utilize
-        //  this output for code generation
-        //
-        if (theParser.getCurrentLexerSymbol() instanceof Lexeme) {
-            theCurrentLexerSymbol =
-                ((Lexeme) theParser.getCurrentLexerSymbol()).getTokenType();
-        }
+        theCurrentLexerSymbol = theParser.getCurrentLexeme().getTokenType();
 
         // If the top of the parse stack equals the current lexer symbol,
         // we know it matched the grammar description and can get the
@@ -73,7 +105,7 @@ public enum TerminalToken implements Symbol {
                     "Line %d Char %d - Expected %s, Got %s",
                     theParser.getLexicalAnalyzer().getLineNumber(),
                     theParser.getLexicalAnalyzer().getCharacterNumber(),
-                    theParser.getCurrentLexerSymbol(),
+                    theParser.getCurrentLexeme(),
                     theParser.getTopOfParseStack()
                 )
             );

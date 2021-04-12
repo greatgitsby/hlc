@@ -1,6 +1,5 @@
 package com.greatgitsby.hlc;
 
-import java.io.*;
 import java.util.*;
 
 /**
@@ -13,22 +12,25 @@ import java.util.*;
  */
 public class Parser {
 
+    private static final int FIRST_REGISTER_LOC = 2;
+    private static final int LAST_REGISTER_LOC = 10;
+
     // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
     private final Map<Symbol, Map<Symbol, List<Symbol>>> _parseTable;
-    private final ArrayDeque<Symbol> _labelStack;
-    private final ArrayDeque<Symbol> _operandStack;
+    private final ArrayDeque<Integer> _labelStack;
+    private final ArrayDeque<Lexeme> _operandStack;
     private final ArrayDeque<Symbol> _operatorStack;
     private final ArrayDeque<Symbol> _parseStack;
     private final Symbol[] _registers;
     private final StringBuilder _asmCode;
 
-    // Parser mutable internal state
-    private Symbol _currentLexerSymbol;
-    private Symbol _currentParserSymbol;
+    private final Map<String, Integer> _stringConstants;
 
-    private static final int FIRST_REGISTER_LOC = 2;
-    private static final int LAST_REGISTER_LOC = 10;
+    // Parser mutable internal state
+    private Lexeme _currentLexeme;
+    private Symbol _currentParserSymbol;
+    private int _numVars;
 
     /**
      * Construct a new Parser
@@ -37,8 +39,9 @@ public class Parser {
 
         // Initialize lexer in Parser
         _lexicalAnalyzer = lexer;
-        _currentLexerSymbol = null;
+        _currentLexeme = null;
         _currentParserSymbol = null;
+        _numVars = 0;
 
         // Construct the parse table
         _parseTable = buildParseTable();
@@ -52,6 +55,7 @@ public class Parser {
         // Create the register array
         _registers = new Symbol[LAST_REGISTER_LOC - FIRST_REGISTER_LOC];
         _asmCode = new StringBuilder();
+        _stringConstants = new HashMap<>();
     }
 
     /**
@@ -61,7 +65,8 @@ public class Parser {
      * @return true if the syntax is valid. An exception will be thrown if
      *         the parser encountered a syntax error
      */
-    public boolean isValidSyntax() throws SyntaxErrorException, IOException {
+    public boolean isValidSyntax() throws SyntaxErrorException {
+
         // Push the end symbol ($) onto the parse stack
         getParseStack().push(Action.EPILOGUE);
 
@@ -94,12 +99,12 @@ public class Parser {
     }
 
     /**
-     * Returns the current lexer symbol
+     * Returns the current lexeme from the Lexical Analyzer
      *
-     * @return the current lexer symbol
+     * @return the current lexeme from the Lexical Analyzer
      */
-    public Symbol getCurrentLexerSymbol() {
-        return _currentLexerSymbol;
+    public Lexeme getCurrentLexeme() {
+        return _currentLexeme;
     }
 
     /**
@@ -134,7 +139,7 @@ public class Parser {
      *
      * @return the label stack of this Parser
      */
-    public ArrayDeque<Symbol> getLabelStack() {
+    public ArrayDeque<Integer> getLabelStack() {
         return _labelStack;
     }
 
@@ -143,7 +148,7 @@ public class Parser {
      *
      * @return the operand stack of this Parser
      */
-    public ArrayDeque<Symbol> getOperandStack() {
+    public ArrayDeque<Lexeme> getOperandStack() {
         return _operandStack;
     }
 
@@ -181,10 +186,10 @@ public class Parser {
     /**
      * Sets the new top of lexer stack
      *
-     * @param theNewSymbol the new top of lexer stack
+     * @param theNewLexeme the new top of lexer stack
      */
-    public void setCurrentLexerSymbol(Symbol theNewSymbol) {
-        _currentLexerSymbol = theNewSymbol;
+    public void setCurrentLexerSymbol(Lexeme theNewLexeme) {
+        _currentLexeme = theNewLexeme;
     }
 
     /**
@@ -196,13 +201,65 @@ public class Parser {
         _currentParserSymbol = theNewTopOfStack;
     }
 
+    public Map<String, Integer> getStringConstants() {
+        return _stringConstants;
+    }
+
     /**
      * TODO Description
      *
-     * @return the register
+     * @return the register, -1 if it could not provision
      */
-    public int getRegister() {
-        return 2;
+    public int getRegister(Lexeme theSymbol) {
+        boolean foundFree = false;
+        int register = -1;
+
+        for (int i = 0; i < _registers.length && !foundFree; i++) {
+            if (_registers[i] != null && _registers[i].equals(theSymbol)) {
+                // Add the lower offset to the register number
+                register = i += FIRST_REGISTER_LOC;
+                foundFree = true;
+            } else if (_registers[i] == null) {
+                // Add the lower offset to the register number
+                foundFree = true;
+                _registers[i] = theSymbol;
+                register = i += FIRST_REGISTER_LOC;
+
+                // TODO Add LOAD action onto parse stack
+                if (theSymbol.getTokenType() == TerminalToken.NUMBER) {
+                    emitToOutput(String.format("\tldr r%d, =#%s", register, theSymbol.getValue()));
+                } else {
+                    emitToOutput(String.format("\tldr r%d, [fp, #%d]", register, -4 * theSymbol.getVariableNumber()));
+                }
+            } else {
+               // Throw error
+            }
+        }
+
+        theSymbol.setRegister(register);
+
+        return register;
+    }
+
+    /**
+     * Clear all registers
+     */
+    public void clearRegisters() {
+        Arrays.fill(_registers, null);
+    }
+
+    public int getNumberOfVariables() {
+        return _numVars;
+    }
+
+    public int incrementVariableNumber() {
+        return ++_numVars;
+    }
+
+    public void emitToOutput(String line) {
+        getOutput()
+            .append(line)
+            .append(System.lineSeparator());
     }
 
     /**

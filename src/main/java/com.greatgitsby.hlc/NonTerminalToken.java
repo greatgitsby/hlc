@@ -40,18 +40,7 @@ public enum NonTerminalToken implements Symbol {
         theParser.getParseStack().pop();
 
         // Get the current parser lexer symbol
-        currentLexerSymbol = theParser.getCurrentLexerSymbol();
-
-        // If this lexer symbol is a Lexeme, we must acquire the token
-        // type of the Lexeme
-        //
-        // TODO Achieve a better OOP approach when we start to utilize
-        //  this output for code generation
-        //
-        if (theParser.getCurrentLexerSymbol() instanceof Lexeme) {
-            currentLexerSymbol =
-                ((Lexeme) theParser.getCurrentLexerSymbol()).getTokenType();
-        }
+        currentLexerSymbol = theParser.getCurrentLexeme().getTokenType();
 
         // If the parse table has an entry for the top of stack of the
         // parse stack and in that entry, there is an entry for the

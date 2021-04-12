@@ -43,20 +43,18 @@ public enum Action implements Token {
             super.doTheThing(theParser);
 
             Symbol theOperand = theParser.getOperandStack().pop();
+            Symbol theSymbolInSymbolTable =
+                theParser.getLexicalAnalyzer().getSymbolTable().get(theOperand.getLexeme().getValue());
 
-            if (!theParser.getLexicalAnalyzer().getSymbolTable().containsKey(theOperand.getLexeme().getValue())) {
+            if (theSymbolInSymbolTable != null) {
+                if (theSymbolInSymbolTable.getVariableNumber() == -1) {
+                    theSymbolInSymbolTable.setVariableNumber(theParser.incrementVariableNumber());
+                } else {
+                    // Throw error, already declared
+                }
 
-                theOperand.setVariableNumber(theParser.incrementVariableNumber());
-
-                theParser
-                    .getLexicalAnalyzer()
-                    .getSymbolTable()
-                    .put(
-                        theOperand.getLexeme().getValue(),
-                        theOperand
-                    );
             } else {
-                // Throw error, multiple declaration
+                // Throw error, not in symbol table. Shouldn't be issue normally
             }
 
             // TODO Add scope-aware semantics

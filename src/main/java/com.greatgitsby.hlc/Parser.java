@@ -1,5 +1,6 @@
 package com.greatgitsby.hlc;
 
+import javax.swing.plaf.synth.SynthUI;
 import java.util.*;
 
 /**
@@ -229,7 +230,7 @@ public class Parser {
 
                 // TODO Add LOAD action onto parse stack
                 if (theSymbol.getLexeme().getTokenType() == TerminalToken.NUMBER) {
-                    emitToOutput(String.format("\tldr r%d, =#%s", register, theSymbol.getLexeme().getTokenType()));
+                    emitToOutput(String.format("\tmov r%d, #%s", register, theSymbol.getLexeme().getValue()));
                 } else {
                     emitToOutput(String.format("\tldr r%d, [fp, #%d]", register, -4 * theSymbol.getVariableNumber()));
                 }

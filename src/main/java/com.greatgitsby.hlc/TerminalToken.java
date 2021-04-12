@@ -34,7 +34,8 @@ public enum TerminalToken implements Token {
         @Override
         public void doTheThing(Parser theParser) throws SyntaxErrorException {
             if (theParser.getLexicalAnalyzer().getSymbolTable().containsKey(theParser.getCurrentLexeme().getValue())) {
-               theParser.getOperandStack().push(theParser.getLexicalAnalyzer().getSymbolTable().get(theParser.getCurrentLexeme().getValue()));
+                Symbol tableEntry = theParser.getLexicalAnalyzer().getSymbolTable().get(theParser.getCurrentLexeme().getValue());
+               theParser.getOperandStack().push(tableEntry);
             } else {
                 // Throw error
             }

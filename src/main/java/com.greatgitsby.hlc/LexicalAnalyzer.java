@@ -363,6 +363,11 @@ public class LexicalAnalyzer {
                              TerminalToken.NUMBER
                          );
                      }
+
+                     // Initialize as "not declared"
+                     Symbol theSymbol = new Symbol(theLexeme, -1);
+
+                     getSymbolTable().put(lexeme, theSymbol);
                  } else {
                      theLexeme = new Lexeme(
                          lexeme,

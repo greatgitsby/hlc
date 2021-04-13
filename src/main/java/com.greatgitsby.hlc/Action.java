@@ -70,27 +70,26 @@ public enum Action implements Token {
                 }
                 break;
             case RELATIONAL_OP:
-                // <|<=|<>|=|>|>=
-                theParser.emitToOutput(String.format("\tcmp r%d, r%d", rhsRegister, lhsRegister));
+                theParser.emitToOutput(String.format("\tcmp r%d, r%d", lhsRegister, rhsRegister));
 
                 switch (operator.getLexeme().getValue()) {
                 case "<":
-                    theParser.emitToOutput(String.format("\tblt end%s", theParser.getLabelStack().peek()));
+                    theParser.emitToOutput(String.format("\tbge end%s", theParser.getLabelStack().peek()));
                     break;
                 case "<=":
-                    theParser.emitToOutput(String.format("\tble end%s", theParser.getLabelStack().peek()));
-                    break;
-                case "<>":
-                    theParser.emitToOutput(String.format("\tbne end%s", theParser.getLabelStack().peek()));
-                    break;
-                case "=":
-                    theParser.emitToOutput(String.format("\tbeq end%s", theParser.getLabelStack().peek()));
-                    break;
-                case ">":
                     theParser.emitToOutput(String.format("\tbgt end%s", theParser.getLabelStack().peek()));
                     break;
+                case "<>":
+                    theParser.emitToOutput(String.format("\tbeq end%s", theParser.getLabelStack().peek()));
+                    break;
+                case "=":
+                    theParser.emitToOutput(String.format("\tbne end%s", theParser.getLabelStack().peek()));
+                    break;
+                case ">":
+                    theParser.emitToOutput(String.format("\tble end%s", theParser.getLabelStack().peek()));
+                    break;
                 case ">=":
-                    theParser.emitToOutput(String.format("\tbge end%s", theParser.getLabelStack().peek()));
+                    theParser.emitToOutput(String.format("\tblt end%s", theParser.getLabelStack().peek()));
                     break;
                 }
                 break;

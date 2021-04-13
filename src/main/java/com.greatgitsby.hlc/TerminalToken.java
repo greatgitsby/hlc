@@ -73,14 +73,21 @@ public enum TerminalToken implements Token {
     STRING_CONST() {
         @Override
         public void doTheThing(Parser theParser) throws SyntaxErrorException {
-            Symbol newStringSymbol = new Symbol(new Lexeme(
+            Symbol newStringSymbol;
+
+            if (!theParser.getStringConstants().containsKey(theParser.getCurrentLexeme().getValue())) {
+                newStringSymbol = new Symbol(new Lexeme(
                     String.format("string%d", theParser.getStringConstants().size() + 1),
                     TerminalToken.STRING_CONST
-            ));
+                ));
+
+                theParser.getStringConstants().put(theParser.getCurrentLexeme().getValue(), newStringSymbol);
+            }
+
+            newStringSymbol = theParser.getStringConstants().get(theParser.getCurrentLexeme().getValue());
 
             // Put the new lexeme's value as the key,
             // old lexeme's actual value as value
-            theParser.getStringConstants().putIfAbsent(newStringSymbol.getLexeme().getValue(), theParser.getCurrentLexeme().getValue());
             theParser.getOperandStack().push(newStringSymbol);
 
             super.doTheThing(theParser);

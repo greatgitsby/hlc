@@ -14,16 +14,19 @@ public class Symbol {
     public Symbol() {
         _lexeme = null;
         _variableNumber = -1;
+        _register = -1;
     }
 
     public Symbol(Lexeme lexeme) {
         _lexeme = lexeme;
         _variableNumber = -1;
+        _register = -1;
     }
 
     public Symbol(Lexeme lexeme, int variableNumber) {
         _lexeme = lexeme;
         _variableNumber = variableNumber;
+        _register = -1;
     }
 
     public int getVariableNumber() {

@@ -2,8 +2,9 @@
 
 begin
     variable u;
+    variable v;
 
-    u := 256;
-
-    print u
+    u := 15 / (5 * 2);
+    print u;
+    print "\n";
 end

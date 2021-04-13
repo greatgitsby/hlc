@@ -13,8 +13,8 @@ import java.util.*;
  */
 public class Parser {
 
-    private static final int FIRST_REGISTER_LOC = 2;
-    private static final int LAST_REGISTER_LOC = 10;
+    private static final int FIRST_REGISTER_LOC = 4;
+    private static final int LAST_REGISTER_LOC = 12;
 
     // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
@@ -26,7 +26,7 @@ public class Parser {
     private final Symbol[] _registers;
     private final StringBuilder _asmCode;
 
-    private final Map<String, String> _stringConstants;
+    private final Map<String, Symbol> _stringConstants;
 
     // Parser mutable internal state
     private Lexeme _currentLexeme;
@@ -58,7 +58,21 @@ public class Parser {
         // Create the register array
         _registers = new Symbol[LAST_REGISTER_LOC - FIRST_REGISTER_LOC];
         _asmCode = new StringBuilder();
-        _stringConstants = new HashMap<>();
+        _stringConstants = new HashMap<>() {{
+            put("\"%d\"", new Symbol(
+                new Lexeme(
+                    "ifmt",
+                    TerminalToken.STRING_CONST
+                )
+            ));
+
+            put("\"%s\"", new Symbol(
+                new Lexeme(
+                    "sfmt",
+                    TerminalToken.STRING_CONST
+                )
+            ));
+        }};
     }
 
     /**
@@ -204,7 +218,7 @@ public class Parser {
         _currentParserSymbol = theNewTopOfStack;
     }
 
-    public Map<String, String> getStringConstants() {
+    public Map<String, Symbol> getStringConstants() {
         return _stringConstants;
     }
 
@@ -217,28 +231,32 @@ public class Parser {
         boolean foundFree = false;
         int register = -1;
 
+        if (theSymbol.getRegister() != -1) {
+            return theSymbol.getRegister();
+        }
+
         for (int i = 0; i < _registers.length && !foundFree; i++) {
-            if (_registers[i] != null && _registers[i].equals(theSymbol)) {
-                // Add the lower offset to the register number
-                register = i += FIRST_REGISTER_LOC;
-                foundFree = true;
-            } else if (_registers[i] == null) {
-                // Add the lower offset to the register number
-                foundFree = true;
+            if (_registers[i] == null) {
                 _registers[i] = theSymbol;
+                // Add the lower offset to the register number
                 register = i += FIRST_REGISTER_LOC;
+                foundFree = true;
 
-                theSymbol.setRegister(register);
-
-                // TODO Add LOAD action onto parse stack
-                if (theSymbol.getLexeme().getTokenType() == TerminalToken.NUMBER) {
-                    emitToOutput(String.format("\tmov r%d, #%s", register, theSymbol.getLexeme().getValue()));
-                } else {
-                    emitToOutput(String.format("\tldr r%d, [fp, #%d]", register, -4 * theSymbol.getVariableNumber()));
+                if (theSymbol.getLexeme() != null) {
+                    if (
+                        theSymbol.getLexeme().getTokenType() == TerminalToken.NUMBER ||
+                        theSymbol.getLexeme().getTokenType() == TerminalToken.STRING_CONST
+                    ) {
+                        emitToOutput(String.format("\tldr r%d, =%s", register, theSymbol.getLexeme().getValue()));
+                    } else {
+                        emitToOutput(String.format("\tldr r%d, [fp, #%d]", register, -4 * theSymbol.getVariableNumber()));
+                    }
                 }
-            } else {
-               // Throw error
             }
+        }
+
+        if (!foundFree) {
+            System.err.println("NO FREE REGISTERS!");
         }
 
         theSymbol.setRegister(register);
@@ -248,7 +266,7 @@ public class Parser {
 
     public void freeRegister(Symbol theSymbol) {
         for (int i = 0; i < _registers.length; i++) {
-            if (_registers[i].equals(theSymbol)) {
+            if (_registers[i] != null && _registers[i].equals(theSymbol)) {
                 _registers[i].setRegister(-1);
                 _registers[i] = null;
             }
@@ -262,17 +280,20 @@ public class Parser {
         Arrays.fill(_registers, null);
     }
 
+    public int getNumberOfLabels() {
+        return _numLabels;
+    }
+
     public int getNumberOfVariables() {
         return _numVars;
     }
 
     public int incrementVariableNumber() {
-        _numVars++;
-        return _numVars;
+        return ++_numVars;
     }
 
     public int incrementNumLabels() {
-        return ++_numVars;
+        return ++_numLabels;
     }
 
     public void emitToOutput(String line) {
@@ -479,7 +500,6 @@ public class Parser {
                 // print_expression -> string_const
                 put(TerminalToken.STRING_CONST, new ArrayList<>() {{
                     add(TerminalToken.STRING_CONST);
-                    add(Action.LOAD);
                     add(Action.PRINT_SFMT);
                 }});
 
@@ -505,7 +525,6 @@ public class Parser {
                 put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
                     add(TerminalToken.RELATIONAL_OP);
-                    add(Action.PUSH_OP);
                     add(NonTerminalToken.EXPRESSION);
                     add(Action.COMPUTE);
                 }});
@@ -514,7 +533,6 @@ public class Parser {
                 put(TerminalToken.LEFT_PAREN, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
                     add(TerminalToken.RELATIONAL_OP);
-                    add(Action.PUSH_OP);
                     add(NonTerminalToken.EXPRESSION);
                     add(Action.COMPUTE);
                 }});
@@ -523,7 +541,6 @@ public class Parser {
                 put(TerminalToken.NUMBER, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
                     add(TerminalToken.RELATIONAL_OP);
-                    add(Action.PUSH_OP);
                     add(NonTerminalToken.EXPRESSION);
                     add(Action.COMPUTE);
                 }});
@@ -532,7 +549,6 @@ public class Parser {
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
                     add(NonTerminalToken.EXPRESSION);
                     add(TerminalToken.RELATIONAL_OP);
-                    add(Action.PUSH_OP);
                     add(NonTerminalToken.EXPRESSION);
                     add(Action.COMPUTE);
                 }});
@@ -612,7 +628,6 @@ public class Parser {
                 // addition -> additive_op term addition
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
                     add(TerminalToken.ADDITIVE_OP);
-                    add(Action.PUSH_OP);
                     add(NonTerminalToken.TERM);
                     add(Action.COMPUTE);
                     add(NonTerminalToken.ADDITION);
@@ -721,7 +736,6 @@ public class Parser {
                 // multiplication -> multiplicative_op factor multiplication
                 put(TerminalToken.MULTIPLICATIVE_OP, new ArrayList<>() {{
                     add(TerminalToken.MULTIPLICATIVE_OP);
-                    add(Action.PUSH_OP);
                     add(NonTerminalToken.FACTOR);
                     add(Action.COMPUTE);
                     add(NonTerminalToken.MULTIPLICATION);
@@ -770,7 +784,6 @@ public class Parser {
                 // factor -> identifier
                 put(TerminalToken.IDENTIFIER, new ArrayList<>() {{
                     add(TerminalToken.IDENTIFIER);
-                    add(Action.LOAD);
                 }});
 
                 // factor -> left_paren expression right_paren
@@ -783,7 +796,6 @@ public class Parser {
                 // factor -> number
                 put(TerminalToken.NUMBER, new ArrayList<>() {{
                     add(TerminalToken.NUMBER);
-                    add(Action.LOAD);
                 }});
 
                 // factor -> signed_term
@@ -834,7 +846,6 @@ public class Parser {
                 // signed_term -> additive_op term
                 put(TerminalToken.ADDITIVE_OP, new ArrayList<>() {{
                     add(TerminalToken.ADDITIVE_OP);
-                    add(Action.PUSH_OP);
                     add(NonTerminalToken.TERM);
                     add(Action.SIGN);
                 }});

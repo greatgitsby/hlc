@@ -34,7 +34,73 @@ public enum Action implements Token {
         public void doTheThing(Parser theParser) {
             super.doTheThing(theParser);
 
-            System.out.println("COMPUTING!");
+            Symbol rhs = theParser.getOperandStack().pop();
+            Symbol lhs = theParser.getOperandStack().pop();
+            Symbol operator = theParser.getOperatorStack().pop();
+            Symbol result = new Symbol();
+
+            int rhsRegister = theParser.getRegister(rhs);
+            int lhsRegister = theParser.getRegister(lhs);
+            int resultRegister = theParser.getRegister(result);
+
+            switch ((TerminalToken) operator.getLexeme().getTokenType()) {
+            case ADDITIVE_OP:
+                if (operator.getLexeme().getValue().equals("-")) {
+                    theParser.emitToOutput(
+                        String.format("\tsub r%d, r%d, r%d", resultRegister, lhsRegister, rhsRegister)
+                    );
+                } else {
+                    theParser.emitToOutput(
+                        String.format("\tadd r%d, r%d, r%d", resultRegister, lhsRegister, rhsRegister)
+                    );
+                }
+                break;
+            case MULTIPLICATIVE_OP:
+                if (operator.getLexeme().getValue().equals("/")) {
+                    theParser.emitToOutput("\tpush { r0-r3, lr }");
+                    theParser.emitToOutput(String.format("\tmov r0, r%d", lhsRegister));
+                    theParser.emitToOutput(String.format("\tmov r1, r%d", rhsRegister));
+                    theParser.emitToOutput("\tbl __aeabi_idiv");
+                    theParser.emitToOutput(String.format("\tmov r%d, r0", resultRegister));
+                    theParser.emitToOutput("\tpop { r0-r3, lr }");
+                } else {
+                    theParser.emitToOutput(
+                        String.format("\tmul r%d, r%d, r%d", resultRegister, lhsRegister, rhsRegister)
+                    );
+                }
+                break;
+            case RELATIONAL_OP:
+                // <|<=|<>|=|>|>=
+                theParser.emitToOutput(String.format("\tcmp r%d, r%d", rhsRegister, lhsRegister));
+
+                switch (operator.getLexeme().getValue()) {
+                case "<":
+                    theParser.emitToOutput(String.format("\tblt end%s", theParser.getLabelStack().peek()));
+                    break;
+                case "<=":
+                    theParser.emitToOutput(String.format("\tble end%s", theParser.getLabelStack().peek()));
+                    break;
+                case "<>":
+                    theParser.emitToOutput(String.format("\tbne end%s", theParser.getLabelStack().peek()));
+                    break;
+                case "=":
+                    theParser.emitToOutput(String.format("\tbeq end%s", theParser.getLabelStack().peek()));
+                    break;
+                case ">":
+                    theParser.emitToOutput(String.format("\tbgt end%s", theParser.getLabelStack().peek()));
+                    break;
+                case ">=":
+                    theParser.emitToOutput(String.format("\tbge end%s", theParser.getLabelStack().peek()));
+                    break;
+                }
+                break;
+            default:
+                // Error
+            }
+
+            theParser.freeRegister(lhs);
+            theParser.freeRegister(rhs);
+            theParser.getOperandStack().push(result);
         }
     },
     DECLARE() {
@@ -101,7 +167,6 @@ public enum Action implements Token {
             );
         }
     },
-    LOAD,
     POP_LABELS() {
         @Override
         public void doTheThing(Parser theParser) {
@@ -129,6 +194,8 @@ public enum Action implements Token {
             theParser.emitToOutput(String.format("\tmov r1, r%d", register));
             theParser.emitToOutput("\tbl printf");
             theParser.emitToOutput("\tpop { r0-r3, lr }");
+
+            theParser.freeRegister(theSymbolToPrint);
         }
     },
     PRINT_SFMT() {
@@ -139,34 +206,49 @@ public enum Action implements Token {
             theParser.emitToOutput("\tldr r0, =sfmt");
         }
     },
-    PUSH_OP() {
+    SIGN() {
         @Override
         public void doTheThing(Parser theParser) {
             super.doTheThing(theParser);
 
-            // TODO Ask why we need this. Can't they push themselves?
+            Symbol theSign = theParser.getOperatorStack().pop();
+            Symbol theOperand = theParser.getOperandStack().pop();
+            Symbol newAnonymousSymbol = new Symbol();
+
+            int operandRegister = theParser.getRegister(theOperand);
+            int newAnonymousRegister = theParser.getRegister(newAnonymousSymbol);
+
+            // Negate if the operator is a negative sign
+            if (theSign.getLexeme().getValue().equals("-")) {
+                theParser.emitToOutput(
+                    String.format("\tneg r%d, r%d", newAnonymousRegister, operandRegister)
+                );
+            }
+
+            theParser.getOperandStack().push(newAnonymousSymbol);
+
+            System.out.println("SIGNED THING!");
         }
     },
-    SIGN,
     STORE() {
         @Override
         public void doTheThing(Parser theParser) {
             super.doTheThing(theParser);
-            System.out.println(theParser.getOperandStack());
-
             Symbol rhs = theParser.getOperandStack().pop();
             Symbol lhs = theParser.getOperandStack().pop();
 
             lhs = theParser.getLexicalAnalyzer().getSymbolTable().get(lhs.getLexeme().getValue());
-
-            System.out.println(lhs.getVariableNumber());
-            System.out.println(rhs.getVariableNumber());
 
             int registerForRhs = theParser.getRegister(rhs);
 
             theParser.emitToOutput(
                 String.format("\tstr r%d, [fp, #%d]", registerForRhs, -4 * lhs.getVariableNumber())
             );
+
+            theParser.freeRegister(lhs);
+            theParser.freeRegister(rhs);
+
+            // TODO Clear out registers
         }
     },
 
@@ -197,13 +279,6 @@ public enum Action implements Token {
             theParser.emitToOutput(".global main");
             theParser.emitToOutput("");
 
-            // Define static data section
-            theParser.emitToOutput(".balign 4");
-            theParser.emitToOutput("ifmt: .asciz \"%d\\n\"");
-
-            theParser.emitToOutput(".balign 4");
-            theParser.emitToOutput("sfmt: .asciz \"%s\\n\"");
-
             // Setup main
             theParser.emitToOutput("");
             theParser.emitToOutput(".balign 4");
@@ -232,6 +307,15 @@ public enum Action implements Token {
             theParser.emitToOutput("\tpop { r0, lr }");
             theParser.emitToOutput("\tmov r0, #0");
             theParser.emitToOutput("\tbx lr");
+            theParser.emitToOutput("");
+            theParser.emitToOutput(".balign 4");
+            theParser.emitToOutput(".data");
+
+            for (String s : theParser.getStringConstants().keySet()) {
+                theParser.emitToOutput("");
+                theParser.emitToOutput(".balign 4");
+                theParser.emitToOutput(String.format("\t%s: .asciz %s", theParser.getStringConstants().get(s).getLexeme().getValue(), s));
+            }
         }
     };
 

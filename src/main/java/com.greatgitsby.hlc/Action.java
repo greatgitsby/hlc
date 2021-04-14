@@ -10,28 +10,31 @@ import java.util.Date;
  * generation phase of the compiler
  */
 public enum Action implements Token {
+
     BEGIN_LABEL() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
+            theParser.emitToOutput();
+            theParser.emitToOutput(".balign 4");
             theParser.emitToOutput(
                 String.format("begin%d:", theParser.getLabelStack().peek())
             );
         }
     },
+
     CLEAR_REGS() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
-
-            System.out.println("CLEAR REGISTERS!");
             theParser.clearRegisters();
         }
     },
+
     COMPUTE() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
             Symbol rhs = theParser.getOperandStack().pop();
@@ -102,9 +105,10 @@ public enum Action implements Token {
             theParser.getOperandStack().push(result);
         }
     },
+
     DECLARE() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
             Symbol theOperand = theParser.getOperandStack().pop();
@@ -126,19 +130,23 @@ public enum Action implements Token {
             theParser.emitToOutput("\tadd sp, sp, #-4");
         }
     },
+
     END_LABEL() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
+            theParser.emitToOutput();
+            theParser.emitToOutput(".balign 4");
             theParser.emitToOutput(
                 String.format("end%d:", theParser.getLabelStack().peek())
             );
         }
     },
+
     GEN_LABELS() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
             theParser.getLabelStack().push(
@@ -146,9 +154,10 @@ public enum Action implements Token {
             );
         }
     },
+
     GOTO_BEGIN() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
             theParser.emitToOutput(
@@ -156,33 +165,26 @@ public enum Action implements Token {
             );
         }
     },
-    GOTO_END() {
-        @Override
-        public void doTheThing(Parser theParser) {
-            super.doTheThing(theParser);
 
-            theParser.emitToOutput(
-                String.format("\tb end%d", theParser.getLabelStack().peek())
-            );
-        }
-    },
     POP_LABELS() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
             theParser.getLabelStack().pop();
         }
     },
+
     PRINT_IFMT() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
             theParser.emitToOutput("\tldr r0, =ifmt");
         }
     },
+
     PRINT_PRINTF() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
             theParser.emitToOutput("\tpush { r0-r3, lr }");
@@ -197,17 +199,19 @@ public enum Action implements Token {
             theParser.freeRegister(theSymbolToPrint);
         }
     },
+
     PRINT_SFMT() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
             theParser.emitToOutput("\tldr r0, =sfmt");
         }
     },
+
     SIGN() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
             Symbol theSign = theParser.getOperatorStack().pop();
@@ -229,9 +233,10 @@ public enum Action implements Token {
             System.out.println("SIGNED THING!");
         }
     },
+
     STORE() {
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
             Symbol rhs = theParser.getOperandStack().pop();
             Symbol lhs = theParser.getOperandStack().pop();
@@ -246,8 +251,6 @@ public enum Action implements Token {
 
             theParser.freeRegister(lhs);
             theParser.freeRegister(rhs);
-
-            // TODO Clear out registers
         }
     },
 
@@ -257,18 +260,37 @@ public enum Action implements Token {
          * {@inheritDoc}
          */
         @Override
-        public void doTheThing(Parser theParser) {
-            // TODO Implement prologue
+        public void doTheThing(Parser theParser) throws CompilerException {
 
+            // Handle default behavior
             super.doTheThing(theParser);
 
-            theParser.emitToOutput("/******************************************");
-            theParser.emitToOutput(" *                                        *");
-            theParser.emitToOutput(" *  AUTO-GENERATED, DO NOT MODIFY         *");
-            theParser.emitToOutput(" *                                        *");
-            theParser.emitToOutput(String.format(" *  DATE: %s    *", new Date()));
-            theParser.emitToOutput(" *                                        *");
-            theParser.emitToOutput(" ******************************************/");
+            // Output beginning of header
+            theParser.emitToOutput(new String[]{
+                "/******************************************",
+                " *                                        *",
+                " *  AUTO-GENERATED, DO NOT MODIFY         *",
+                " *                                        *"
+            });
+
+            // Output header file name
+            theParser.emitToOutput(
+                String.format(
+                    " *  FILE: %-32s*",
+                    theParser.getLexicalAnalyzer().getFileName()
+                )
+            );
+
+            // Output date compiled
+            theParser.emitToOutput(
+                String.format(" *  DATE: %s    *", new Date())
+            );
+
+            // Output ending of header
+            theParser.emitToOutput(new String[]{
+                " *                                        *",
+                " ******************************************/"
+            });
 
             // External glibc calls
             theParser.emitToOutput(".extern printf");
@@ -276,10 +298,9 @@ public enum Action implements Token {
 
             // Define global entry point
             theParser.emitToOutput(".global main");
-            theParser.emitToOutput("");
+            theParser.emitToOutput();
 
             // Setup main
-            theParser.emitToOutput("");
             theParser.emitToOutput(".balign 4");
             theParser.emitToOutput(".text");
             theParser.emitToOutput("main:");
@@ -293,12 +314,14 @@ public enum Action implements Token {
          * {@inheritDoc}
          */
         @Override
-        public void doTheThing(Parser theParser) {
+        public void doTheThing(Parser theParser)
+            throws CompilerException
+        {
             // TODO Implement epilogue
 
             super.doTheThing(theParser);
 
-            theParser.emitToOutput("");
+            theParser.emitToOutput();
             theParser.emitToOutput(".balign 4");
             theParser.emitToOutput(".text");
             theParser.emitToOutput("quit:");
@@ -306,14 +329,21 @@ public enum Action implements Token {
             theParser.emitToOutput("\tpop { r0, lr }");
             theParser.emitToOutput("\tmov r0, #0");
             theParser.emitToOutput("\tbx lr");
-            theParser.emitToOutput("");
+            theParser.emitToOutput();
             theParser.emitToOutput(".balign 4");
             theParser.emitToOutput(".data");
 
-            for (String s : theParser.getStringConstants().keySet()) {
+            for (String key : theParser.getStringConstants().keySet()) {
                 theParser.emitToOutput("");
                 theParser.emitToOutput(".balign 4");
-                theParser.emitToOutput(String.format("\t%s: .asciz %s", theParser.getStringConstants().get(s).getLexeme().getValue(), s));
+                theParser.emitToOutput(
+                    String.format(
+                        "%s: .asciz %s",
+                        theParser.getStringConstants().get(key)
+                            .getLexeme().getValue(),
+                        key
+                    )
+                );
             }
         }
     };
@@ -322,10 +352,10 @@ public enum Action implements Token {
      * {@inheritDoc}
      */
     @Override
-    public void doTheThing(Parser theParser) {
+    public void doTheThing(Parser theParser)
+        throws CompilerException
+    {
         // Remove action from parse stack
         theParser.getParseStack().pop();
-
-        // TODO Implement default Action behavior
     }
 }

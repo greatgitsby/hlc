@@ -19,6 +19,7 @@ public class LexicalAnalyzer {
     private final HashMap<String, TerminalToken>            _keywordTable;
     private final HashMap<String, Symbol>                   _symbolTable;
     private final PushbackReader                            _fileReader;
+    private final String                                    _filename;
 
     // Private mutable instance variables
     private State   _currentState;
@@ -50,6 +51,8 @@ public class LexicalAnalyzer {
     public LexicalAnalyzer(String filepath)
         throws IOException, IllegalArgumentException, SyntaxErrorException
     {
+        File theFile;
+
         // Initialize internal state
         _stateTable = new HashMap<>();
         _symbolTable = new HashMap<>();
@@ -58,10 +61,14 @@ public class LexicalAnalyzer {
         _charNumber = 0;
         _hasNextLexeme = true;
 
+        theFile = new File(filepath).getAbsoluteFile();
+
         // Create file and file reader
         _fileReader = new PushbackReader(
-            new FileReader(new File(filepath).getAbsoluteFile())
+            new FileReader(theFile)
         );
+
+        _filename = theFile.getName();
 
         // Read in the first character from the file reader
         _currentChar = _fileReader.read();
@@ -226,6 +233,7 @@ public class LexicalAnalyzer {
          Lexeme theLexeme;
          StringBuilder lexemeValue;
          String lexeme;
+         Symbol theSymbol;
          boolean hasAcquiredSymbol;
          char normalizedChar;
 
@@ -365,8 +373,9 @@ public class LexicalAnalyzer {
                      }
 
                      // Initialize as "not declared"
-                     Symbol theSymbol = new Symbol(theLexeme, -1);
+                     theSymbol = new Symbol(theLexeme);
 
+                     // Add to symbol table if this is a SYMBOL
                      if (_currentState == State.SYMBOL) {
                          getSymbolTable().putIfAbsent(lexeme, theSymbol);
                      }
@@ -458,6 +467,15 @@ public class LexicalAnalyzer {
      */
     public HashMap<String, Symbol> getSymbolTable() {
         return _symbolTable;
+    }
+
+    /**
+     * Get the file name associated with the Lexical Analyzer
+     *
+     * @return the file name
+     */
+    public String getFileName() {
+        return _filename;
     }
 
     /**

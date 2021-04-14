@@ -13,8 +13,14 @@ import java.util.*;
  */
 public class Parser {
 
+    // 4 is the min, r0-r3 can be augmented by function calls
     private static final int FIRST_REGISTER_LOC = 4;
-    private static final int LAST_REGISTER_LOC = 12;
+
+    // 10 is max, 11 and on have special meaning (r11 = FP, etc.)
+    private static final int LAST_REGISTER_LOC = 10;
+
+    // Indicates if a register is allocated or not
+    private static final int NOT_ALLOCATED = -1;
 
     // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
@@ -109,7 +115,11 @@ public class Parser {
             // Tell the symbol on the top of the parse stack to
             // do its thing. If it does not succeed, it is due to a syntax
             // error
-            getTopOfParseStack().doTheThing(this);
+            try {
+                getTopOfParseStack().doTheThing(this);
+            } catch (CompilerException e) {
+                e.printStackTrace();
+            }
         }
 
         return true;
@@ -227,39 +237,39 @@ public class Parser {
      *
      * @return the register, -1 if it could not provision
      */
-    public int getRegister(Symbol theSymbol) {
+    public int getRegister(Symbol theSymbol) throws RegisterAllocationException {
         boolean foundFree = false;
-        int register = -1;
+        int register = theSymbol.getRegister();
 
-        if (theSymbol.getRegister() != -1) {
-            return theSymbol.getRegister();
-        }
+        // If the register is allocated,
+        if (register == NOT_ALLOCATED) {
+            for (int i = 0; i < _registers.length && !foundFree; i++) {
+                if (_registers[i] == null) {
+                    _registers[i] = theSymbol;
 
-        for (int i = 0; i < _registers.length && !foundFree; i++) {
-            if (_registers[i] == null) {
-                _registers[i] = theSymbol;
-                // Add the lower offset to the register number
-                register = i += FIRST_REGISTER_LOC;
-                foundFree = true;
+                    // Add the lower offset to the register number
+                    register = i += FIRST_REGISTER_LOC;
+                    foundFree = true;
 
-                if (theSymbol.getLexeme() != null) {
-                    if (
-                        theSymbol.getLexeme().getTokenType() == TerminalToken.NUMBER ||
-                        theSymbol.getLexeme().getTokenType() == TerminalToken.STRING_CONST
-                    ) {
-                        emitToOutput(String.format("\tldr r%d, =%s", register, theSymbol.getLexeme().getValue()));
-                    } else {
-                        emitToOutput(String.format("\tldr r%d, [fp, #%d]", register, -4 * theSymbol.getVariableNumber()));
+                    if (theSymbol.getLexeme() != null) {
+                        if (
+                            theSymbol.getLexeme().getTokenType() == TerminalToken.NUMBER ||
+                            theSymbol.getLexeme().getTokenType() == TerminalToken.STRING_CONST
+                        ) {
+                            emitToOutput(String.format("\tldr r%d, =%s", register, theSymbol.getLexeme().getValue()));
+                        } else {
+                            emitToOutput(String.format("\tldr r%d, [fp, #%d]", register, -4 * theSymbol.getVariableNumber()));
+                        }
                     }
                 }
             }
-        }
 
-        if (!foundFree) {
-            System.err.println("NO FREE REGISTERS!");
-        }
+            if (!foundFree) {
+                throw new RegisterAllocationException("No free registers!");
+            }
 
-        theSymbol.setRegister(register);
+            theSymbol.setRegister(register);
+        }
 
         return register;
     }
@@ -267,7 +277,7 @@ public class Parser {
     public void freeRegister(Symbol theSymbol) {
         for (int i = 0; i < _registers.length; i++) {
             if (_registers[i] != null && _registers[i].equals(theSymbol)) {
-                _registers[i].setRegister(-1);
+                _registers[i].setRegister(NOT_ALLOCATED);
                 _registers[i] = null;
             }
         }
@@ -296,10 +306,21 @@ public class Parser {
         return ++_numLabels;
     }
 
+    public void emitToOutput() {
+        getOutput()
+            .append(System.lineSeparator());
+    }
+
     public void emitToOutput(String line) {
         getOutput()
             .append(line)
             .append(System.lineSeparator());
+    }
+
+    public void emitToOutput(String[] lines) {
+        for (String line : lines) {
+            getOutput().append(line).append(System.lineSeparator());
+        }
     }
 
     /**

@@ -5,5 +5,5 @@ public interface Token {
     /**
      * Do that thing!
      */
-    void doTheThing(Parser theParser) throws SyntaxErrorException;
+    void doTheThing(Parser theParser) throws CompilerException;
 }

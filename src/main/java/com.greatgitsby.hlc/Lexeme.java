@@ -33,6 +33,12 @@ public class Lexeme {
         return _tokenType;
     }
 
+    /**
+     * Retrieves the value of the Lexeme, typically the representation
+     * of the Lexeme as depicted in the source code file
+     *
+     * @return the value of the Lexeme
+     */
     public String getValue() {
         return _value;
     }

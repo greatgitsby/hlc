@@ -14,13 +14,21 @@ import java.util.*;
 public class Parser {
 
     // 4 is the min, r0-r3 can be augmented by function calls
+    // as per ARM convention
     private static final int FIRST_REGISTER_LOC = 4;
 
     // 10 is max, 11 and on have special meaning (r11 = FP, etc.)
     private static final int LAST_REGISTER_LOC = 10;
 
     // Indicates if a register is allocated or not
-    private static final int NOT_ALLOCATED = -1;
+    public static final int NOT_ALLOCATED = -1;
+
+    // The local offset for variables
+    public static final int LOCAL_VAR_OFFSET = -4;
+
+    public static final String BEGIN_LABEL_PREFIX = "begin_";
+    public static final String END_LABEL_PREFIX = "end_";
+    public static final String STRING_CONST_PREFIX = "str_";
 
     // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
@@ -54,6 +62,10 @@ public class Parser {
 
         // Construct the parse table
         _parseTable = buildParseTable();
+        _stringConstants = new HashMap<>();
+
+        // Assembly code aggregator
+        _asmCode = new StringBuilder();
 
         // Initialize data structures
         _labelStack = new ArrayDeque<>();
@@ -63,22 +75,22 @@ public class Parser {
 
         // Create the register array
         _registers = new Symbol[LAST_REGISTER_LOC - FIRST_REGISTER_LOC];
-        _asmCode = new StringBuilder();
-        _stringConstants = new HashMap<>() {{
-            put("\"%d\"", new Symbol(
-                new Lexeme(
-                    "ifmt",
-                    TerminalToken.STRING_CONST
-                )
-            ));
 
-            put("\"%s\"", new Symbol(
-                new Lexeme(
-                    "sfmt",
-                    TerminalToken.STRING_CONST
-                )
-            ));
-        }};
+        // Put the integer format into the constant pool
+        _stringConstants.put("\"%d\"", new Symbol(
+            new Lexeme(
+                "ifmt",
+                TerminalToken.STRING_CONST
+            )
+        ));
+
+        // Put the string format into the constant pool
+        _stringConstants.put("\"%s\"", new Symbol(
+            new Lexeme(
+                "sfmt",
+                TerminalToken.STRING_CONST
+            )
+        ));
     }
 
     /**
@@ -90,7 +102,7 @@ public class Parser {
      */
     public boolean isValidSyntax() throws SyntaxErrorException {
 
-        // Push the end symbol ($) onto the parse stack
+        // Push the epilogue action onto the parse stack
         getParseStack().push(Action.EPILOGUE);
 
         // Push the end symbol ($) onto the parse stack
@@ -100,8 +112,7 @@ public class Parser {
         // STATEMENT non-terminal, onto the parse stack
         getParseStack().push(NonTerminalToken.STATEMENT);
 
-        // Push the entry point into the grammar, in this case the
-        // STATEMENT non-terminal, onto the parse stack
+        // Push the prologue action onto the parse stack
         getParseStack().push(Action.PROLOGUE);
 
         // Get the first symbol from the lexical analyzer
@@ -237,7 +248,7 @@ public class Parser {
      *
      * @return the register, -1 if it could not provision
      */
-    public int getRegister(Symbol theSymbol) throws RegisterAllocationException {
+    public int getRegister(Symbol theSymbol) throws CompilerException {
         boolean foundFree = false;
         int register = theSymbol.getRegister();
 
@@ -251,33 +262,90 @@ public class Parser {
                     register = i += FIRST_REGISTER_LOC;
                     foundFree = true;
 
+                    // Symbol must not be anonymous, has a Lexeme
                     if (theSymbol.getLexeme() != null) {
+
+                        // Symbol is a number or string const
                         if (
-                            theSymbol.getLexeme().getTokenType() == TerminalToken.NUMBER ||
-                            theSymbol.getLexeme().getTokenType() == TerminalToken.STRING_CONST
+                            theSymbol
+                                .getLexeme()
+                                .getTokenType()
+                                .equals(TerminalToken.NUMBER) ||
+                            theSymbol
+                                .getLexeme()
+                                .getTokenType()
+                                .equals(TerminalToken.STRING_CONST)
                         ) {
-                            emitToOutput(String.format("\tldr r%d, =%s", register, theSymbol.getLexeme().getValue()));
-                        } else {
-                            emitToOutput(String.format("\tldr r%d, [fp, #%d]", register, -4 * theSymbol.getVariableNumber()));
+                            // Emit the load instruction for string
+                            // labels or immediate values (numbers)
+                            emitToOutput(
+                                String.format(
+                                    "\tldr r%d, =%s\n",
+                                    register,
+                                    theSymbol.getLexeme().getValue()
+                                )
+                            );
+                        }
+                        // Symbol has been declared
+                        else if (
+                            theSymbol.getVariableNumber() != NOT_ALLOCATED
+                        ) {
+                            // Emit the load instruction for a local variable,
+                            // obtaining the offset from the symbol
+                            emitToOutput(
+                                String.format(
+                                    "\tldr r%d, [fp, #%d]\n",
+
+                                    register,
+                                    LOCAL_VAR_OFFSET *
+                                        theSymbol.getVariableNumber()
+                                )
+                            );
+                        }
+                        // Symbol is not defined, must throw exception
+                        else {
+                            throw new VariableNotDefinedException(
+                                String.format(
+                                    "Line %d Char %d - " +
+                                    "Variable %s is not defined",
+
+                                    getLexicalAnalyzer().getLineNumber(),
+                                    getLexicalAnalyzer().getCharacterNumber(),
+                                    theSymbol.getLexeme().getValue()
+                                )
+                            );
                         }
                     }
                 }
             }
 
+            // If a free register was not found, all registers have been
+            // consumed, throw exception
             if (!foundFree) {
                 throw new RegisterAllocationException("No free registers!");
             }
 
+            // Set the symbol's register for quick returns later
             theSymbol.setRegister(register);
         }
 
         return register;
     }
 
+    /**
+     * Free the register that a given Symbol holds
+     *
+     * @param theSymbol the symbol to free
+     */
     public void freeRegister(Symbol theSymbol) {
         for (int i = 0; i < _registers.length; i++) {
             if (_registers[i] != null && _registers[i].equals(theSymbol)) {
+
+                // "Deallocate" the register from the symbol's
+                // perspective
                 _registers[i].setRegister(NOT_ALLOCATED);
+
+                // Remove the symbol from the register array
                 _registers[i] = null;
             }
         }
@@ -290,14 +358,6 @@ public class Parser {
         Arrays.fill(_registers, null);
     }
 
-    public int getNumberOfLabels() {
-        return _numLabels;
-    }
-
-    public int getNumberOfVariables() {
-        return _numVars;
-    }
-
     public int incrementVariableNumber() {
         return ++_numVars;
     }
@@ -306,21 +366,9 @@ public class Parser {
         return ++_numLabels;
     }
 
-    public void emitToOutput() {
-        getOutput()
-            .append(System.lineSeparator());
-    }
-
     public void emitToOutput(String line) {
         getOutput()
-            .append(line)
-            .append(System.lineSeparator());
-    }
-
-    public void emitToOutput(String[] lines) {
-        for (String line : lines) {
-            getOutput().append(line).append(System.lineSeparator());
-        }
+            .append(line);
     }
 
     /**

@@ -10,9 +10,6 @@ package com.greatgitsby.hlc;
  */
 public class Symbol {
 
-    // Indicates field is not initialized
-    private static final int NOT_INITIALIZED = -1;
-
     // Private immutable state
     private final Lexeme _lexeme;
 
@@ -27,8 +24,8 @@ public class Symbol {
      */
     public Symbol(Lexeme lexeme) {
         _lexeme = lexeme;
-        _variableNumber = NOT_INITIALIZED;
-        _register = NOT_INITIALIZED;
+        _variableNumber = Parser.NOT_ALLOCATED;
+        _register = Parser.NOT_ALLOCATED;
     }
 
     /**

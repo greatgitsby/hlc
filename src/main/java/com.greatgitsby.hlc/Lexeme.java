@@ -11,7 +11,7 @@ public class Lexeme {
 
     // Private immutable instance variables
     private final String _value;
-    private final TerminalToken _tokenType;
+    private final Token _tokenType;
 
     /**
      * Constructs a new Lexeme
@@ -19,7 +19,7 @@ public class Lexeme {
      * @param value the value from the file
      * @param tokenType the type of Lexeme this is
      */
-    public Lexeme(String value, TerminalToken tokenType) {
+    public Lexeme(String value, Token tokenType) {
         _value = value;
         _tokenType = tokenType;
     }

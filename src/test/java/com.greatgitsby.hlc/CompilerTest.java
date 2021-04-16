@@ -27,17 +27,16 @@ public class CompilerTest {
      */
     @ParameterizedTest(name = "Compiler - Good Program {index}: {0}")
     @MethodSource("provideGoodProgramCompilerFilenames")
-    void test_compiler_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
+    void test_compiler_GoodPrograms(String filename) throws IOException, CompilerException {
         Parser p = new Parser(
             new LexicalAnalyzer(resolveGoodCompilerFile(filename))
         );
 
         System.out.printf("--- PROGRAM %s ---------%n", filename);
-        System.out.printf("Is valid: %s%n", p.isValidSyntax());
 
-        System.out.printf("--------- OUTPUT ---------%n");
-        System.out.println(p.dumpOutput());
-        System.out.printf("--------- OUTPUT ---------%n");
+        if (p.isValidSyntax()) {
+            System.out.println(p.dumpOutput());
+        }
 
         File f = new File(resolveGoodCompilerFile("out/" + filename.replace(".h", ".s")));
 
@@ -59,7 +58,7 @@ public class CompilerTest {
      */
     @ParameterizedTest(name = "Parser - Good Program {index}: {0}")
     @MethodSource("provideGoodProgramParserFilenames")
-    void test_parser_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
+    void test_parser_GoodPrograms(String filename) throws IOException, CompilerException {
         Assertions.assertTrue(
             new Parser(
                 new LexicalAnalyzer(resolveGoodParserFile(filename))
@@ -75,7 +74,7 @@ public class CompilerTest {
     @ParameterizedTest(name = "Parser - Bad Program {index}: {0}")
     @MethodSource("provideBadProgramParserFilenames")
     void test_parser_BadPrograms(String filename) {
-        Assertions.assertThrows(SyntaxErrorException.class, () -> {
+        Assertions.assertThrows(CompilerException.class, () -> {
             try {
                 new Parser(
                     new LexicalAnalyzer(resolveBadParserFile(filename))
@@ -96,7 +95,7 @@ public class CompilerTest {
      */
     @ParameterizedTest(name = "Lexer - Good Program {index}: {0}")
     @MethodSource("provideGoodProgramLexerFilenames")
-    void test_lexer_GoodPrograms(String filename) throws IOException, SyntaxErrorException {
+    void test_lexer_GoodPrograms(String filename) throws IOException, CompilerException {
         LexicalAnalyzer l = new LexicalAnalyzer(resolveGoodLexerFile(filename));
 
         while (l.hasNextSymbol()) {

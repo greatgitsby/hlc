@@ -12,19 +12,37 @@ import java.util.Date;
 public enum Action implements Token {
 
     BEGIN_LABEL() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Perform the default behavior for the Action symbol
             super.doTheThing(theParser);
 
-            theParser.emitToOutput();
-            theParser.emitToOutput(".balign 4");
+            // Output the begin label. Use the top of the stack
+            // to determine which label to output
             theParser.emitToOutput(
-                String.format("begin%d:", theParser.getLabelStack().peek())
+                String.format(
+                    """
+                    
+                    .balign 4
+                    %s%d:
+                    """,
+                    Parser.BEGIN_LABEL_PREFIX,
+                    theParser.getLabelStack().peek()
+                )
             );
         }
     },
 
     CLEAR_REGS() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
@@ -33,118 +51,239 @@ public enum Action implements Token {
     },
 
     COMPUTE() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Perform the default behavior for Actions
             super.doTheThing(theParser);
 
-            Symbol rhs = theParser.getOperandStack().pop();
-            Symbol lhs = theParser.getOperandStack().pop();
-            Symbol operator = theParser.getOperatorStack().pop();
-            Symbol result = new Symbol();
+            Symbol rhs;
+            Symbol lhs;
+            Symbol operator;
+            Symbol result;
+            String operation;
 
-            int rhsRegister = theParser.getRegister(rhs);
-            int lhsRegister = theParser.getRegister(lhs);
-            int resultRegister = theParser.getRegister(result);
+            result = new Symbol();
+            operation = "";
 
-            switch ((TerminalToken) operator.getLexeme().getTokenType()) {
-            case ADDITIVE_OP:
+            // Get the right hand side, left hand side, and operator
+            // from their respective stacks
+            rhs = theParser.getOperandStack().pop();
+            lhs = theParser.getOperandStack().pop();
+            operator = theParser.getOperatorStack().pop();
+
+            // Additive op [ +, - ]
+            if (
+                TerminalToken.ADDITIVE_OP
+                    .equals(operator.getLexeme().getTokenType())
+            ) {
+
+                // Subtraction
                 if (operator.getLexeme().getValue().equals("-")) {
-                    theParser.emitToOutput(
-                        String.format("\tsub r%d, r%d, r%d", resultRegister, lhsRegister, rhsRegister)
-                    );
-                } else {
-                    theParser.emitToOutput(
-                        String.format("\tadd r%d, r%d, r%d", resultRegister, lhsRegister, rhsRegister)
-                    );
-                }
-                break;
-            case MULTIPLICATIVE_OP:
-                if (operator.getLexeme().getValue().equals("/")) {
-                    theParser.emitToOutput("\tpush { r0-r3, lr }");
-                    theParser.emitToOutput(String.format("\tmov r0, r%d", lhsRegister));
-                    theParser.emitToOutput(String.format("\tmov r1, r%d", rhsRegister));
-                    theParser.emitToOutput("\tbl __aeabi_idiv");
-                    theParser.emitToOutput(String.format("\tmov r%d, r0", resultRegister));
-                    theParser.emitToOutput("\tpop { r0-r3, lr }");
-                } else {
-                    theParser.emitToOutput(
-                        String.format("\tmul r%d, r%d, r%d", resultRegister, lhsRegister, rhsRegister)
-                    );
-                }
-                break;
-            case RELATIONAL_OP:
-                theParser.emitToOutput(String.format("\tcmp r%d, r%d", lhsRegister, rhsRegister));
 
+                    // Emit the subtract operation
+                    // sub Rd, Rs, Rs
+                    theParser.emitToOutput(
+                        String.format(
+                            "\tsub r%d, r%d, r%d\n",
+                            theParser.getRegister(result),
+                            theParser.getRegister(lhs),
+                            theParser.getRegister(rhs)
+                        )
+                    );
+                }
+                // Addition
+                else {
+
+                    // Emit the add operation
+                    // add Rd, Rs, Rs
+                    theParser.emitToOutput(
+                        String.format(
+                            "\tadd r%d, r%d, r%d\n",
+                            theParser.getRegister(result),
+                            theParser.getRegister(lhs),
+                            theParser.getRegister(rhs)
+                        )
+                    );
+                }
+            }
+            // Multiplicative operation [ *, / ]
+            else if (
+                TerminalToken.MULTIPLICATIVE_OP
+                    .equals(operator.getLexeme().getTokenType())
+            ) {
+
+                // Divide
+                if (operator.getLexeme().getValue().equals("/")) {
+
+                    // Output the divide instruction with the boilerplate
+                    // to branch to the libgcc __aeabi_idiv function that
+                    // handles integer division
+                    theParser.emitToOutput(
+                        String.format(
+                            """
+                            \tmov r0, r%d
+                            \tmov r1, r%d
+                            \tbl __aeabi_idiv
+                            \tmov r%d, r0
+                            """,
+                            theParser.getRegister(lhs),
+                            theParser.getRegister(rhs),
+                            theParser.getRegister(result)
+                        )
+                    );
+                }
+                // Multiply
+                else {
+
+                    // Output multiply instruction with lhs and rhs and result
+                    // mul Rd, Rs, Rs
+                    theParser.emitToOutput(
+                        String.format(
+                            "\tmul r%d, r%d, r%d\n",
+                            theParser.getRegister(result),
+                            theParser.getRegister(lhs),
+                            theParser.getRegister(rhs)
+                        )
+                    );
+                }
+            }
+            // Relational operator [ <, <=, <>, =, >, >= ]
+            else if (
+                TerminalToken.RELATIONAL_OP
+                    .equals(operator.getLexeme().getTokenType())
+            ) {
+
+                // Emit the comparison for the right hand side and the left
+                // hand side
+                theParser.emitToOutput(
+                    String.format(
+                        "\tcmp r%d, r%d\n",
+                        theParser.getRegister(lhs),
+                        theParser.getRegister(rhs)
+                    )
+                );
+
+                // Determine which "branch on false" should be selected
+                // based on their
                 switch (operator.getLexeme().getValue()) {
                 case "<":
-                    theParser.emitToOutput(String.format("\tbge end%s", theParser.getLabelStack().peek()));
+                    operation = "bge";
                     break;
                 case "<=":
-                    theParser.emitToOutput(String.format("\tbgt end%s", theParser.getLabelStack().peek()));
+                    operation = "bgt";
                     break;
                 case "<>":
-                    theParser.emitToOutput(String.format("\tbeq end%s", theParser.getLabelStack().peek()));
+                    operation = "beq";
                     break;
                 case "=":
-                    theParser.emitToOutput(String.format("\tbne end%s", theParser.getLabelStack().peek()));
+                    operation = "bne";
                     break;
                 case ">":
-                    theParser.emitToOutput(String.format("\tble end%s", theParser.getLabelStack().peek()));
+                    operation = "ble";
                     break;
                 case ">=":
-                    theParser.emitToOutput(String.format("\tblt end%s", theParser.getLabelStack().peek()));
+                    operation = "blt"; // Yum
                     break;
                 }
-                break;
-            default:
-                // Error
+
+                // Emit the branch instruction to the current end label
+                theParser.emitToOutput(
+                    String.format(
+                        "\t%s end%s\n",
+                        operation,
+                        theParser.getLabelStack().peek()
+                    )
+                );
             }
 
+            // Release the left hand side and right hand side symbols from
+            // their registers
             theParser.freeRegister(lhs);
             theParser.freeRegister(rhs);
+
+            // Push the result temporary register onto the operand stack
             theParser.getOperandStack().push(result);
         }
     },
 
     DECLARE() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Perform the default behavior for Action symbols
             super.doTheThing(theParser);
 
-            Symbol theOperand = theParser.getOperandStack().pop();
-            Symbol theSymbolInSymbolTable =
-                theParser.getLexicalAnalyzer().getSymbolTable().get(theOperand.getLexeme().getValue());
+            Symbol theOperand;
 
-            if (theSymbolInSymbolTable != null) {
-                if (theSymbolInSymbolTable.getVariableNumber() == -1) {
-                    theSymbolInSymbolTable.setVariableNumber(theParser.incrementVariableNumber());
-                } else {
-                    // Throw error, already declared
-                }
+            // Pop the operand from the top of the operand stack
+            theOperand = theParser.getOperandStack().pop();
 
-            } else {
-                // Throw error, not in symbol table. Shouldn't be issue normally
+            // Mark the operand as allocated by getting the next
+            // variable number from the parser
+            if (theOperand.getVariableNumber() == Parser.NOT_ALLOCATED) {
+                theOperand.setVariableNumber(
+                    theParser.incrementVariableNumber()
+                );
+            }
+            // Variable is already declared, throw an exception
+            else {
+
+                // TODO Add scope to message
+                throw new VariableAlreadyDefinedException(
+                    String.format(
+                        "Variable %s is already defined",
+                        theOperand.getLexeme().getValue()
+                    )
+                );
             }
 
             // TODO Add scope-aware semantics
-            theParser.emitToOutput("\tadd sp, sp, #-4");
+            // TODO Aggregate all stack ptr add instructions
+            theParser.emitToOutput("\tadd sp, sp, #-4\n");
         }
     },
 
     END_LABEL() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Perform the default behavior for the Action symbol
             super.doTheThing(theParser);
 
-            theParser.emitToOutput();
-            theParser.emitToOutput(".balign 4");
+            // Output the end label. Use the top of the stack
+            // to determine which label to output
             theParser.emitToOutput(
-                String.format("end%d:", theParser.getLabelStack().peek())
+               String.format(
+                   """
+                   
+                   .balign 4
+                   %s%d:
+                   """,
+                   Parser.END_LABEL_PREFIX,
+                   theParser.getLabelStack().peek()
+               )
             );
         }
     },
 
     GEN_LABELS() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
@@ -156,17 +295,25 @@ public enum Action implements Token {
     },
 
     GOTO_BEGIN() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
             theParser.emitToOutput(
-                String.format("\tb begin%d", theParser.getLabelStack().peek())
+                String.format("\tb begin%d\n", theParser.getLabelStack().peek())
             );
         }
     },
 
     POP_LABELS() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
@@ -175,41 +322,54 @@ public enum Action implements Token {
     },
 
     PRINT_IFMT() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
-            theParser.emitToOutput("\tldr r0, =ifmt");
+            theParser.emitToOutput("\tldr r0, =ifmt\n");
         }
     },
 
     PRINT_PRINTF() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
-            theParser.emitToOutput("\tpush { r0-r3, lr }");
-
             Symbol theSymbolToPrint = theParser.getOperandStack().pop();
             int register = theParser.getRegister(theSymbolToPrint);
 
-            theParser.emitToOutput(String.format("\tmov r1, r%d", register));
-            theParser.emitToOutput("\tbl printf");
-            theParser.emitToOutput("\tpop { r0-r3, lr }");
+            theParser.emitToOutput(String.format("\tmov r1, r%d\n", register));
+            theParser.emitToOutput("\tbl printf\n");
 
             theParser.freeRegister(theSymbolToPrint);
         }
     },
 
     PRINT_SFMT() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
-            theParser.emitToOutput("\tldr r0, =sfmt");
+            theParser.emitToOutput("\tldr r0, =sfmt\n");
         }
     },
 
     SIGN() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
@@ -218,37 +378,77 @@ public enum Action implements Token {
             Symbol theOperand = theParser.getOperandStack().pop();
             Symbol newAnonymousSymbol = new Symbol();
 
-            int operandRegister = theParser.getRegister(theOperand);
-            int newAnonymousRegister = theParser.getRegister(newAnonymousSymbol);
-
             // Negate if the operator is a negative sign
             if (theSign.getLexeme().getValue().equals("-")) {
                 theParser.emitToOutput(
-                    String.format("\tneg r%d, r%d", newAnonymousRegister, operandRegister)
+                    String.format(
+                        "\tneg r%d, r%d\n",
+                        theParser.getRegister(newAnonymousSymbol),
+                        theParser.getRegister(theOperand)
+                    )
+                );
+            }
+            // Otherwise, it is a positive number, use a simple move
+            else {
+                theParser.emitToOutput(
+                    String.format(
+                        "\tmov r%d, r%d\n",
+                        theParser.getRegister(newAnonymousSymbol),
+                        theParser.getRegister(theOperand)
+                    )
                 );
             }
 
-            theParser.getOperandStack().push(newAnonymousSymbol);
+            // Free the operand's register
+            theParser.freeRegister(theOperand);
 
-            System.out.println("SIGNED THING!");
+            // Push the new anonymous symbol onto the operand stack
+            theParser.getOperandStack().push(newAnonymousSymbol);
         }
     },
 
     STORE() {
+
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+            Symbol rhs;
+            Symbol lhs;
+
+            // Perform the common behavior for all Action symbols
             super.doTheThing(theParser);
-            Symbol rhs = theParser.getOperandStack().pop();
-            Symbol lhs = theParser.getOperandStack().pop();
 
-            lhs = theParser.getLexicalAnalyzer().getSymbolTable().get(lhs.getLexeme().getValue());
+            // Get the first operand off the stack, the "right hand side"
+            rhs = theParser.getOperandStack().pop();
 
-            int registerForRhs = theParser.getRegister(rhs);
+            // Get the second operand off the stack and get the
+            lhs = theParser.getOperandStack().pop();
 
-            theParser.emitToOutput(
-                String.format("\tstr r%d, [fp, #%d]", registerForRhs, -4 * lhs.getVariableNumber())
-            );
+            if (lhs.getVariableNumber() != Parser.NOT_ALLOCATED) {
+                // Emit the str instruction, getting the variable number of the
+                // left hand side and computing the offset to store the rhs
+                // in the proper memory location
+                theParser.emitToOutput(
+                    String.format(
+                        "\tstr r%d, [fp, #%d]\n",
+                        theParser.getRegister(rhs),
+                        Parser.LOCAL_VAR_OFFSET * lhs.getVariableNumber()
+                    )
+                );
+            } else {
+                throw new VariableNotDefinedException(
+                    String.format(
+                        "Line %d Char %d - Variable %s is not defined",
+                        theParser.getLexicalAnalyzer().getLineNumber(),
+                        theParser.getLexicalAnalyzer().getCharacterNumber(),
+                        lhs.getLexeme().getValue()
+                    )
+                );
+            }
 
+            // Free the left hand and right hand sides from their registers
             theParser.freeRegister(lhs);
             theParser.freeRegister(rhs);
         }
@@ -266,46 +466,34 @@ public enum Action implements Token {
             super.doTheThing(theParser);
 
             // Output beginning of header
-            theParser.emitToOutput(new String[]{
-                "/******************************************",
-                " *                                        *",
-                " *  AUTO-GENERATED, DO NOT MODIFY         *",
-                " *                                        *"
-            });
-
-            // Output header file name
             theParser.emitToOutput(
                 String.format(
-                    " *  FILE: %-32s*",
-                    theParser.getLexicalAnalyzer().getFileName()
+                    """
+                    /****************************************
+                     *                                      *
+                     *  AUTO-GENERATED, DO NOT MODIFY       *
+                     *                                      *
+                     *  FILE: %-30s*
+                     *  DATE: %s  *
+                     *                                      *
+                     ****************************************/
+                     
+                    .extern printf
+                    .extern __aeabi_idiv
+                     
+                    .global main
+                    .text
+                    
+                    .balign 4
+                    main:
+                    \tpush { lr }
+                    \tmov fp, sp
+                    """,
+
+                    theParser.getLexicalAnalyzer().getFileName(),
+                    new Date()
                 )
             );
-
-            // Output date compiled
-            theParser.emitToOutput(
-                String.format(" *  DATE: %s    *", new Date())
-            );
-
-            // Output ending of header
-            theParser.emitToOutput(new String[]{
-                " *                                        *",
-                " ******************************************/"
-            });
-
-            // External glibc calls
-            theParser.emitToOutput(".extern printf");
-            theParser.emitToOutput(".extern __aeabi_idiv");
-
-            // Define global entry point
-            theParser.emitToOutput(".global main");
-            theParser.emitToOutput();
-
-            // Setup main
-            theParser.emitToOutput(".balign 4");
-            theParser.emitToOutput(".text");
-            theParser.emitToOutput("main:");
-            theParser.emitToOutput("\tpush { r0, lr }");
-            theParser.emitToOutput("\tmov fp, sp");
         }
     },
     EPILOGUE() {
@@ -317,30 +505,43 @@ public enum Action implements Token {
         public void doTheThing(Parser theParser)
             throws CompilerException
         {
-            // TODO Implement epilogue
 
+            // Perform the default
             super.doTheThing(theParser);
 
-            theParser.emitToOutput();
-            theParser.emitToOutput(".balign 4");
-            theParser.emitToOutput(".text");
-            theParser.emitToOutput("quit:");
-            theParser.emitToOutput("\tmov sp, fp");
-            theParser.emitToOutput("\tpop { r0, lr }");
-            theParser.emitToOutput("\tmov r0, #0");
-            theParser.emitToOutput("\tbx lr");
-            theParser.emitToOutput();
-            theParser.emitToOutput(".balign 4");
-            theParser.emitToOutput(".data");
+            // Emit the program quit boilerplate
+            theParser.emitToOutput(
+                """
+                
+                .text
+                .balign 4
+                quit:
+                \tmov sp, fp
+                \tpop { lr }
+                \tmov r0, #0
+                \tbx lr
+                
+                .data
+                """
+            );
 
             for (String key : theParser.getStringConstants().keySet()) {
-                theParser.emitToOutput("");
-                theParser.emitToOutput(".balign 4");
+
+                // Emit each string in the constant pool in the data
+                // section
                 theParser.emitToOutput(
                     String.format(
-                        "%s: .asciz %s",
-                        theParser.getStringConstants().get(key)
-                            .getLexeme().getValue(),
+                        """
+                        
+                        .balign 4
+                        %s:
+                        \t.asciz %s
+                        """,
+                        theParser
+                            .getStringConstants()
+                            .get(key)
+                            .getLexeme()
+                            .getValue(),
                         key
                     )
                 );

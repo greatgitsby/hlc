@@ -18,13 +18,13 @@ public class LexicalAnalyzer {
     private final HashMap<State, HashMap<Character, State>> _stateTable;
     private final HashMap<String, TerminalToken>            _keywordTable;
     private final HashMap<String, Symbol>                   _symbolTable;
-    private final PushbackReader                            _fileReader;
+    private final LineNumberReader                          _fileReader;
     private final String                                    _filename;
 
     // Private mutable instance variables
     private State   _currentState;
-    private int     _lineNumber;
     private int     _charNumber;
+    private int     _lineNumber;
     private boolean _hasNextLexeme;
     private int     _currentChar;
 
@@ -57,16 +57,19 @@ public class LexicalAnalyzer {
         _stateTable = new HashMap<>();
         _symbolTable = new HashMap<>();
         _currentState = State.START;
-        _lineNumber = 0;
-        _charNumber = 0;
+        _charNumber = 1;
+        _lineNumber = 1;
         _hasNextLexeme = true;
 
         theFile = new File(filepath).getAbsoluteFile();
 
         // Create file and file reader
-        _fileReader = new PushbackReader(
+        _fileReader = new LineNumberReader(
             new FileReader(theFile)
         );
+
+        // Set line number to first line, 1
+        _fileReader.setLineNumber(1);
 
         _filename = theFile.getName();
 
@@ -228,7 +231,7 @@ public class LexicalAnalyzer {
      * @return the next symbol
      * @throws NoSuchElementException if there are no more lexemes to return
      */
-     public Lexeme nextSymbol() throws SyntaxErrorException {
+     public Lexeme nextSymbol() throws CompilerException {
          // Local variables
          Lexeme theLexeme;
          StringBuilder lexemeValue;
@@ -266,24 +269,26 @@ public class LexicalAnalyzer {
 
                  // Add the incoming character to the lexeme
                  lexemeValue.append(Character.toString(_currentChar));
-                 _charNumber++;
 
                  // If we have hit the END_COMMENT character,
                  // it is time to move to the COMMENT state
                  if (normalizedChar == END_COMMENT) {
                      _currentState = State.COMMENT;
                  }
+
+                 readNextCharacter();
              } else if (_currentState == State.IN_STRING) {
 
                  // Add the incoming character to the lexeme
                  lexemeValue.append(Character.toString(_currentChar));
-                 _charNumber++;
 
                  // If we have hit the END_STRING_CONST character,
                  // it is time to move to the STRING_CONST state
                  if (normalizedChar == END_STRING_CONST) {
                      _currentState = State.STRING_CONST;
                  }
+
+                 readNextCharacter();
              }
              // Check if there is a next state, if not, we've hit a dead end
              // and need to determine next steps. is this state accepting?
@@ -301,30 +306,11 @@ public class LexicalAnalyzer {
 
                  // Add the character to the lexeme
                  lexemeValue.append(Character.toString(_currentChar));
-                 _charNumber++;
+
+                 readNextCharacter();
              }
              // State is an accepting state, formulate the new lexeme
              else if (_currentState.isAccepting()) {
-
-                 // Push the last character back onto the pushback
-                 // reader
-                 try {
-                     _fileReader.unread(_currentChar);
-                 } catch (IOException e) {
-                     throw new SyntaxErrorException(
-                         String.format(
-                             "Line %d Char %d - I/O Error",
-                             getLineNumber(),
-                             getCharacterNumber()
-                         )
-                     );
-                 }
-
-                 // If the character is a new line, "back up
-                 // to the previous line"
-                 if (_currentChar == NEWLINE) {
-                     _lineNumber--;
-                 }
 
                  // Get the current value of the lexeme
                  lexeme = lexemeValue.toString();
@@ -339,21 +325,27 @@ public class LexicalAnalyzer {
                      if (_currentState == State.SYMBOL) {
                          theLexeme = new Lexeme(
                              lexeme,
-                             TerminalToken.IDENTIFIER
+                             TerminalToken.IDENTIFIER,
+                             getLineNumber(),
+                             getCharacterNumber() - lexeme.length()
                          );
                      }
                      // It's whitespace if we were in the WHITESPACE state
                      else if (_currentState == State.WHITESPACE) {
                          theLexeme = new Lexeme(
                              lexeme,
-                             TerminalToken.WHITESPACE
+                             TerminalToken.WHITESPACE,
+                             getLineNumber(),
+                             getCharacterNumber() - lexeme.length()
                          );
                      }
                      // It's a comment if we were in the COMMENT state
                      else if (_currentState == State.COMMENT) {
                          theLexeme = new Lexeme(
                              lexeme,
-                             TerminalToken.COMMENT
+                             TerminalToken.COMMENT,
+                             getLineNumber(),
+                             getCharacterNumber() - lexeme.length()
                          );
                      }
                      // It's a STRING_CONST if we were in the STRING_CONST
@@ -361,14 +353,18 @@ public class LexicalAnalyzer {
                      else if (_currentState == State.STRING_CONST) {
                          theLexeme = new Lexeme(
                              lexeme,
-                             TerminalToken.STRING_CONST
+                             TerminalToken.STRING_CONST,
+                             getLineNumber(),
+                             getCharacterNumber() - lexeme.length()
                          );
                      }
                      // It's a NUMBER if we were in the NUMBER state
                      else if (_currentState == State.NUMBER) {
                          theLexeme = new Lexeme(
                              lexeme,
-                             TerminalToken.NUMBER
+                             TerminalToken.NUMBER,
+                             getLineNumber(),
+                             getCharacterNumber() - lexeme.length()
                          );
                      }
 
@@ -418,37 +414,43 @@ public class LexicalAnalyzer {
 
                  // Exit the loop
                  hasAcquiredSymbol = true;
+
+                 readNextCharacter();
              } else {
                  // Invalid syntax, print location of error
                  throw new SyntaxErrorException(
                      String.format(
-                         "Line %d, Char %d: Invalid Syntax",
-                         _lineNumber, _charNumber
-                     )
-                 );
-             }
-
-             // "Go to next line"
-             if (normalizedChar == NEWLINE) {
-                 _lineNumber++;
-                 _charNumber = 1;
-             }
-
-             // Read the next character in
-             try {
-                 _currentChar = _fileReader.read();
-             } catch (IOException e) {
-                 throw new SyntaxErrorException(
-                     String.format(
-                         "Line %d Char %d - I/O Error",
-                         getLineNumber(),
-                         getCharacterNumber()
+                         "Line %d Char %d: Invalid Syntax",
+                         getLineNumber(), getCharacterNumber()
                      )
                  );
              }
          }
 
          return theLexeme;
+    }
+
+    private void readNextCharacter() throws CompilerException {
+        // Read the next character in
+        try {
+            _currentChar = _fileReader.read();
+
+            if (_fileReader.getLineNumber() != _lineNumber) {
+                _lineNumber = _fileReader.getLineNumber();
+                _charNumber = 0;
+            }
+
+            _charNumber++;
+        } catch (IOException e) {
+            throw new SyntaxErrorException(
+                String.format(
+                    "Line %d Char %d - I/O Error: %s",
+                    getLineNumber(),
+                    getCharacterNumber(),
+                    e.getMessage()
+                )
+            );
+        }
     }
 
     /**
@@ -493,7 +495,7 @@ public class LexicalAnalyzer {
      * @return the line number the lexical analyzer is currently on
      */
     public int getLineNumber() {
-        return _lineNumber;
+        return _fileReader.getLineNumber();
     }
 
     /**

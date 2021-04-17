@@ -1,6 +1,7 @@
 package com.greatgitsby.hlc;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -56,7 +57,7 @@ public class CompilerTest {
      * @throws IOException if there was a file error
      * @throws SyntaxErrorException if the code was syntactically invalid
      */
-    @ParameterizedTest(name = "Compiler - Good Program {index}: {0}")
+    @ParameterizedTest(name = "Compiler - Bad Program {index}: {0}")
     @MethodSource("provideBadProgramCompilerFilenames")
     void test_compiler_BadPrograms(String filename) {
         Assertions.assertThrows(CompilerException.class, () -> {
@@ -65,6 +66,28 @@ public class CompilerTest {
             );
 
             p.isValidSyntax();
+        });
+    }
+
+    /**
+     * Test a program file against the full compiler experience
+     *
+     * @param filename the file to test
+     * @throws IOException if there was a file error
+     * @throws SyntaxErrorException if the code was syntactically invalid
+     */
+    @Test()
+    void test_compiler_BadProgram() {
+        Assertions.assertThrows(CompilerException.class, () -> {
+            Parser p = new Parser(
+                new LexicalAnalyzer(
+                    resolveBadCompilerFile("badprog3.h")
+                )
+            );
+
+            p.isValidSyntax();
+
+            System.out.println(p.dumpOutput());
         });
     }
 
@@ -98,7 +121,7 @@ public class CompilerTest {
                 new Parser(
                     new LexicalAnalyzer(resolveBadParserFile(filename))
                 ).isValidSyntax();
-            } catch (SyntaxErrorException e) {
+            } catch (CompilerException e) {
                 e.printStackTrace();
                 throw e;
             }

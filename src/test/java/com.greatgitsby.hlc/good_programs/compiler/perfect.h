@@ -1,7 +1,7 @@
 {
-    This program checks to see if a number is a perfect number. 
+    This program checks to see if a number is a perfect number.
     A number is considered perfect if it is equal to the sum of
-    its positive divisors, excluding itself. For example, 6 is a perfect 
+    its positive divisors, excluding itself. For example, 6 is a perfect
     number because 1 + 2 + 3 = 6.
 }
 
@@ -27,7 +27,7 @@ begin
     }
     while counter > 0 do
     begin
-        
+
         { We don't have mod, so we can clumsily simulate it here }
         fakeMod := counter;
         while fakeMod < n do

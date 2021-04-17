@@ -382,6 +382,12 @@ public class Parser {
      * Clear all registers
      */
     public void clearRegisters() {
+        for (Symbol theSymbol : _registers) {
+            if (theSymbol != null) {
+                theSymbol.setRegister(NOT_ALLOCATED);
+            }
+        }
+
         Arrays.fill(_registers, null);
     }
 

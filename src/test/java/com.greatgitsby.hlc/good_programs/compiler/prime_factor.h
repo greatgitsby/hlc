@@ -1,7 +1,7 @@
 {
 finds all the prime factors for a number n by a brute force method
 }
- 
+
 begin
     variable n;
     variable p;

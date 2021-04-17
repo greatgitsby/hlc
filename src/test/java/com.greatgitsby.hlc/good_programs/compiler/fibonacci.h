@@ -10,7 +10,7 @@ begin
     variable b;
     variable i;
     variable c;
-    
+
     {
     Change the value of n to change the output of the program.  Whatever
     the value of n is, is the value we are finding the fib sequence of.
@@ -19,15 +19,15 @@ begin
     a := 1;
     b := 1;
     i := 3;
-    
+
     while i <= n do
     begin
         c := a + b;
         a := b;
         b := c;
         i := i + 1
-    end;  
-             
+    end;
+
     print b;
     print "\n"
-end 
+end

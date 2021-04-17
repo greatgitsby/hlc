@@ -1,5 +1,5 @@
 { A simple program to test nested if}
- 
+
 begin
     variable u;
 

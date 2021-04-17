@@ -1,5 +1,5 @@
 { A simple program to test a while loop }
- 
+
 begin
     variable u;
 

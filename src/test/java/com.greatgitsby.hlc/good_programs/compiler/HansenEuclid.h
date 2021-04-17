@@ -10,7 +10,7 @@ begin
    a := 732;
    b := 546;
 
-   while b <> 0 do 
+   while b <> 0 do
       if a > b then
          a := a - b
       else

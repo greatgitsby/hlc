@@ -11,7 +11,10 @@ public class Lexeme {
 
     // Private immutable instance variables
     private final String _value;
-    private final Token _tokenType;
+    private final Token  _tokenType;
+
+    private int    _lineNumber;
+    private int    _beginningCharNumber;
 
     /**
      * Constructs a new Lexeme
@@ -22,6 +25,28 @@ public class Lexeme {
     public Lexeme(String value, Token tokenType) {
         _value = value;
         _tokenType = tokenType;
+        _lineNumber = 0;
+        _beginningCharNumber = 0;
+    }
+
+    /**
+     * Constructs a new Lexeme with beginning char and line numbers
+     *
+     * @param value the value from the file
+     * @param tokenType the type of Lexeme this is
+     * @param lineNumber the line number this Lexeme resides on
+     * @param beginningCharNumber the location of the first character
+     */
+    public Lexeme(
+        String value,
+        Token tokenType,
+        int lineNumber,
+        int beginningCharNumber
+    ) {
+        _value = value;
+        _tokenType = tokenType;
+        _lineNumber = lineNumber;
+        _beginningCharNumber = beginningCharNumber;
     }
 
     /**
@@ -41,6 +66,30 @@ public class Lexeme {
      */
     public String getValue() {
         return _value;
+    }
+
+    /**
+     *
+     * @return
+     */
+    public int getLineNumber() {
+        return _lineNumber;
+    }
+
+    /**
+     *
+     * @return
+     */
+    public int getBeginningCharNumber() {
+        return _beginningCharNumber;
+    }
+
+    public void setLineNumber(int lineNumber) {
+        _lineNumber = lineNumber;
+    }
+
+    public void setBeginningCharNumber(int beginningCharNumber) {
+        _beginningCharNumber = beginningCharNumber;
     }
 
     /**

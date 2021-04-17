@@ -6,10 +6,10 @@ Author: 1696920
 begin
    variable p;
    variable i;
-   
+
    p := 13;
    i := 2;
-   
+
    { If i divides p, p is not prime }
    if (p / i) = 0 then
    begin
@@ -27,9 +27,9 @@ begin
          else
             i := i + 2
       end;
-      
+
       print p;
-      
+
       { if i equals p + 3, we exited from finding a divisible term, else p is prime }
       if (p + 3) = i then
          print " is not prime.\n"

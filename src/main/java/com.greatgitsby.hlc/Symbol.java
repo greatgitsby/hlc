@@ -10,12 +10,10 @@ package com.greatgitsby.hlc;
  */
 public class Symbol {
 
-    // Private immutable state
-    private final Lexeme _lexeme;
-
     // Private mutable state
-    private int _variableNumber;
-    private int _register;
+    private Lexeme _lexeme;
+    private int     _variableNumber;
+    private int     _register;
 
     /**
      * Construct a Symbol with a Lexeme
@@ -42,6 +40,10 @@ public class Symbol {
      */
     public Lexeme getLexeme() {
         return _lexeme;
+    }
+
+    public void setLexeme(Lexeme theLexeme) {
+        _lexeme = theLexeme;
     }
 
     /**

@@ -1,6 +1,8 @@
 package com.greatgitsby.hlc;
 
+import java.util.ArrayDeque;
 import java.util.Date;
+import java.util.NoSuchElementException;
 
 /**
  * Action
@@ -74,11 +76,50 @@ public enum Action implements Token {
             result = new Symbol();
             operation = "";
 
-            // Get the right hand side, left hand side, and operator
-            // from their respective stacks
-            rhs = theParser.getOperandStack().pop();
-            lhs = theParser.getOperandStack().pop();
             operator = theParser.getOperatorStack().pop();
+
+            if (!theParser.getOperandStack().isEmpty()) {
+
+                // Get the right hand side from the operand stack
+                rhs = theParser.getOperandStack().pop();
+            } else {
+
+                // If operand stack is empty, this means the LHS is missing
+                // from the source code since there was only one thing
+                // pushed onto the stack
+                throw new CompilerException(
+                    String.format(
+                        "Line %d Char %d - " +
+                        "Missing LHS of expression \"%s\"",
+
+                        operator.getLexeme().getLineNumber(),
+                        operator.getLexeme().getBeginningCharNumber(),
+                        operator.getLexeme().getValue()
+                    )
+                );
+            }
+
+            if (!theParser.getOperandStack().isEmpty()) {
+
+                // Get the left hand side from the operand stack
+                lhs = theParser.getOperandStack().pop();
+            } else {
+
+                // If operand stack is empty, this means the LHS is missing
+                // from the source code since there was only one thing
+                // pushed onto the stack
+                throw new CompilerException(
+                    String.format(
+                        "Line %d Char %d - " +
+                        "Missing RHS of expression \"%s %s ???\"",
+
+                        rhs.getLexeme().getLineNumber(),
+                        rhs.getLexeme().getBeginningCharNumber(),
+                        rhs.getLexeme().getValue(),
+                        operator.getLexeme().getValue()
+                    )
+                );
+            }
 
             // Additive op [ +, - ]
             if (
@@ -114,6 +155,9 @@ public enum Action implements Token {
                         )
                     );
                 }
+
+                // Push the result temporary register onto the operand stack
+                theParser.getOperandStack().push(result);
             }
             // Multiplicative operation [ *, / ]
             else if (
@@ -155,6 +199,9 @@ public enum Action implements Token {
                         )
                     );
                 }
+
+                // Push the result temporary register onto the operand stack
+                theParser.getOperandStack().push(result);
             }
             // Relational operator [ <, <=, <>, =, >, >= ]
             else if (
@@ -210,9 +257,6 @@ public enum Action implements Token {
             // their registers
             theParser.freeRegister(lhs);
             theParser.freeRegister(rhs);
-
-            // Push the result temporary register onto the operand stack
-            theParser.getOperandStack().push(result);
         }
     },
 
@@ -245,7 +289,9 @@ public enum Action implements Token {
                 // TODO Add scope to message
                 throw new VariableAlreadyDefinedException(
                     String.format(
-                        "Variable %s is already defined",
+                        "Line %d Char %d - Variable %s is already defined",
+                        theOperand.getLexeme().getLineNumber(),
+                        theOperand.getLexeme().getBeginningCharNumber(),
                         theOperand.getLexeme().getValue()
                     )
                 );
@@ -468,15 +514,57 @@ public enum Action implements Token {
         public void doTheThing(Parser theParser) throws CompilerException {
             Symbol rhs;
             Symbol lhs;
+            Symbol operator;
 
             // Perform the common behavior for all Action symbols
             super.doTheThing(theParser);
 
-            // Get the first operand off the stack, the "right hand side"
-            rhs = theParser.getOperandStack().pop();
+            // Pop the assignment operator off the operator stack
+            operator = theParser.getOperatorStack().pop();
 
-            // Get the second operand off the stack and get the
-            lhs = theParser.getOperandStack().pop();
+            if (!theParser.getOperandStack().isEmpty()) {
+
+                // Get the first operand off the stack, the "right hand side"
+                // of the assignment expression
+                rhs = theParser.getOperandStack().pop();
+            } else {
+
+                // If operand stack is empty, this means the LHS is missing
+                // from the source code since there was only one thing
+                // pushed onto the stack
+                throw new CompilerException(
+                    String.format(
+                        "Line %d Char %d - " +
+                        "Missing LHS of expression",
+
+                        operator.getLexeme().getLineNumber(),
+                        operator.getLexeme().getBeginningCharNumber()
+                    )
+                );
+            }
+
+            if (!theParser.getOperandStack().isEmpty()) {
+
+                // Get the second operand off the stack, the "left hand side"
+                // of the assignment expression
+                lhs = theParser.getOperandStack().pop();
+            } else {
+
+                // If operand stack is empty, this means the RHS is missing
+                // from the source code since there was only one thing
+                // pushed onto the stack
+                throw new CompilerException(
+                    String.format(
+                        "Line %d Char %d - " +
+                        "Missing RHS of expression \"%s %s ???\"",
+
+                        rhs.getLexeme().getLineNumber(),
+                        rhs.getLexeme().getBeginningCharNumber(),
+                        rhs.getLexeme().getValue(),
+                        operator.getLexeme().getValue()
+                    )
+                );
+            }
 
             // Store the rhs into the lhs if it is allocated, else
             // throw an exception indicating the lhs is not defined
@@ -496,8 +584,9 @@ public enum Action implements Token {
                 throw new VariableNotDefinedException(
                     String.format(
                         "Line %d Char %d - Variable %s is not defined",
-                        theParser.getLexicalAnalyzer().getLineNumber(),
-                        theParser.getLexicalAnalyzer().getCharacterNumber(),
+
+                        lhs.getLexeme().getLineNumber(),
+                        lhs.getLexeme().getBeginningCharNumber(),
                         lhs.getLexeme().getValue()
                     )
                 );

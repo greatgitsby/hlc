@@ -56,16 +56,21 @@ public enum TerminalToken implements Token {
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
 
+            // Get the symbol from the symbol table
+            Symbol theSymbolInTheTable =
+                theParser
+                    .getLexicalAnalyzer()
+                    .getSymbolTable()
+                    .get(theParser.getCurrentLexeme().getValue());
+
+            // Update the lexeme attached to the symbol with the new current
+            // lexeme. This preserves the most up to date line number for the
+            // latest occurrence of this symbol for accurate error messages
+            theSymbolInTheTable.setLexeme(theParser.getCurrentLexeme());
+
             // Get the symbol from the symbol table and push it onto the
             // operand stack
-            theParser
-                .getOperandStack()
-                .push(
-                    theParser
-                        .getLexicalAnalyzer()
-                        .getSymbolTable()
-                        .get(theParser.getCurrentLexeme().getValue())
-                );
+            theParser.getOperandStack().push(theSymbolInTheTable);
 
             // Perform the default behavior for Terminal Tokens
             super.doTheThing(theParser);

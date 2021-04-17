@@ -14,7 +14,7 @@ begin
 	If the exponent is 0 then the result should just be 1.
 	}
 	result := 1;
-	i := 0; 
+	i := 0;
 
 	while i < exponent do
 	begin

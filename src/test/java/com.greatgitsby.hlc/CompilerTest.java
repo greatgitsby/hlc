@@ -50,6 +50,25 @@ public class CompilerTest {
     }
 
     /**
+     * Test a program file against the full compiler experience
+     *
+     * @param filename the file to test
+     * @throws IOException if there was a file error
+     * @throws SyntaxErrorException if the code was syntactically invalid
+     */
+    @ParameterizedTest(name = "Compiler - Good Program {index}: {0}")
+    @MethodSource("provideBadProgramCompilerFilenames")
+    void test_compiler_BadPrograms(String filename) {
+        Assertions.assertThrows(CompilerException.class, () -> {
+            Parser p = new Parser(
+                new LexicalAnalyzer(resolveBadCompilerFile(filename))
+            );
+
+            p.isValidSyntax();
+        });
+    }
+
+    /**
      * Test a program file against the Parser
      *
      * @param filename the file to test
@@ -141,6 +160,10 @@ public class CompilerTest {
         return resolveFile(BAD_PROGRAMS_PARSER_DIR, filename);
     }
 
+    private static String resolveBadCompilerFile(String filename) {
+        return resolveFile(BAD_PROGRAMS_COMPILER_DIR, filename);
+    }
+
     /**
      * Provide a stream of filenames for good programs
      *
@@ -186,6 +209,15 @@ public class CompilerTest {
         return getFilenamesAsArgsIn(BAD_PROGRAMS_PARSER_DIR);
     }
 
+    /**
+     * Provide a stream of filenames for good programs
+     *
+     * @return a stream of filenames for good programs
+     */
+    private static Stream<Arguments> provideBadProgramCompilerFilenames() {
+        return getFilenamesAsArgsIn(BAD_PROGRAMS_COMPILER_DIR);
+    }
+
     // Test directory
     private static final String TEST_DIR =
             "./src/test/java/com.greatgitsby.hlc";
@@ -212,4 +244,7 @@ public class CompilerTest {
 
     private static final String BAD_PROGRAMS_PARSER_DIR =
             BAD_PROGRAM_DIR + "/parser";
+
+    private static final String BAD_PROGRAMS_COMPILER_DIR =
+        BAD_PROGRAM_DIR + "/compiler";
 }

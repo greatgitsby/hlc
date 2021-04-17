@@ -29,6 +29,8 @@ public class Parser {
     public static final String BEGIN_LABEL_PREFIX = "begin_";
     public static final String END_LABEL_PREFIX = "end_";
     public static final String STRING_CONST_PREFIX = "str_";
+    public static final String STRING_FORMAT_NAME = "sfmt";
+    public static final String INTEGER_FORMAT_NAME = "ifmt";
 
     // Parser immutable internal state
     private final LexicalAnalyzer _lexicalAnalyzer;
@@ -79,7 +81,7 @@ public class Parser {
         // Put the integer format into the constant pool
         _stringConstants.put("\"%d\"", new Symbol(
             new Lexeme(
-                "ifmt",
+                INTEGER_FORMAT_NAME,
                 TerminalToken.STRING_CONST
             )
         ));
@@ -87,7 +89,7 @@ public class Parser {
         // Put the string format into the constant pool
         _stringConstants.put("\"%s\"", new Symbol(
             new Lexeme(
-                "sfmt",
+                STRING_FORMAT_NAME,
                 TerminalToken.STRING_CONST
             )
         ));
@@ -100,7 +102,7 @@ public class Parser {
      * @return true if the syntax is valid. An exception will be thrown if
      *         the parser encountered a syntax error
      */
-    public boolean isValidSyntax() throws SyntaxErrorException {
+    public boolean isValidSyntax() throws CompilerException {
 
         // Push the epilogue action onto the parse stack
         getParseStack().push(Action.EPILOGUE);
@@ -130,6 +132,7 @@ public class Parser {
                 getTopOfParseStack().doTheThing(this);
             } catch (CompilerException e) {
                 e.printStackTrace();
+                throw e;
             }
         }
 
@@ -217,6 +220,11 @@ public class Parser {
         return _asmCode;
     }
 
+    /**
+     * Dump the output string
+     *
+     * @return the compiler output
+     */
     public String dumpOutput() {
         return _asmCode.toString();
     }
@@ -239,8 +247,76 @@ public class Parser {
         _currentParserSymbol = theNewTopOfStack;
     }
 
+    /**
+     * Returns the pool of string constants
+     *
+     * @return the pool of string constants
+     */
     public Map<String, Symbol> getStringConstants() {
         return _stringConstants;
+    }
+
+    /**
+     * Load a symbol into a register. Emits the proper ARM instructions based
+     * on the type of the symbol
+     *
+     * @param theSymbol the symbol to load
+     * @throws CompilerException if the variable was not defined
+     */
+    private void loadSymbolIntoRegister(Symbol theSymbol)
+        throws CompilerException
+    {
+
+        // Symbol is a number or string const
+        if (
+            theSymbol
+                .getLexeme()
+                .getTokenType()
+                .equals(TerminalToken.NUMBER) ||
+                theSymbol
+                    .getLexeme()
+                    .getTokenType()
+                    .equals(TerminalToken.STRING_CONST)
+        ) {
+            // Emit the load instruction for string
+            // labels or immediate values (numbers)
+            emitToOutput(
+                String.format(
+                    "\tldr r%d, =%s\n",
+                    theSymbol.getRegister(),
+                    theSymbol.getLexeme().getValue()
+                )
+            );
+        }
+        // Symbol has been declared
+        else if (
+            theSymbol.getVariableNumber() != NOT_ALLOCATED
+        ) {
+            // Emit the load instruction for a local variable,
+            // obtaining the offset from the symbol
+            emitToOutput(
+                String.format(
+                    "\tldr r%d, [fp, #%d]\n",
+
+                    theSymbol.getRegister(),
+                    LOCAL_VAR_OFFSET *
+                        theSymbol.getVariableNumber()
+                )
+            );
+        }
+        // Symbol is not defined, must throw exception
+        else {
+            throw new VariableNotDefinedException(
+                String.format(
+                    "Line %d Char %d - " +
+                    "Variable %s is not defined",
+
+                    getLexicalAnalyzer().getLineNumber(),
+                    getLexicalAnalyzer().getCharacterNumber(),
+                    theSymbol.getLexeme().getValue()
+                )
+            );
+        }
     }
 
     /**
@@ -262,59 +338,13 @@ public class Parser {
                     register = i += FIRST_REGISTER_LOC;
                     foundFree = true;
 
-                    // Symbol must not be anonymous, has a Lexeme
+                    // Set the symbol's register for quick returns later
+                    theSymbol.setRegister(register);
+
+                    // Load the symbol into memory if it is not anonymous
+                    // (it contains a lexeme)
                     if (theSymbol.getLexeme() != null) {
-
-                        // Symbol is a number or string const
-                        if (
-                            theSymbol
-                                .getLexeme()
-                                .getTokenType()
-                                .equals(TerminalToken.NUMBER) ||
-                            theSymbol
-                                .getLexeme()
-                                .getTokenType()
-                                .equals(TerminalToken.STRING_CONST)
-                        ) {
-                            // Emit the load instruction for string
-                            // labels or immediate values (numbers)
-                            emitToOutput(
-                                String.format(
-                                    "\tldr r%d, =%s\n",
-                                    register,
-                                    theSymbol.getLexeme().getValue()
-                                )
-                            );
-                        }
-                        // Symbol has been declared
-                        else if (
-                            theSymbol.getVariableNumber() != NOT_ALLOCATED
-                        ) {
-                            // Emit the load instruction for a local variable,
-                            // obtaining the offset from the symbol
-                            emitToOutput(
-                                String.format(
-                                    "\tldr r%d, [fp, #%d]\n",
-
-                                    register,
-                                    LOCAL_VAR_OFFSET *
-                                        theSymbol.getVariableNumber()
-                                )
-                            );
-                        }
-                        // Symbol is not defined, must throw exception
-                        else {
-                            throw new VariableNotDefinedException(
-                                String.format(
-                                    "Line %d Char %d - " +
-                                    "Variable %s is not defined",
-
-                                    getLexicalAnalyzer().getLineNumber(),
-                                    getLexicalAnalyzer().getCharacterNumber(),
-                                    theSymbol.getLexeme().getValue()
-                                )
-                            );
-                        }
+                        loadSymbolIntoRegister(theSymbol);
                     }
                 }
             }
@@ -324,9 +354,6 @@ public class Parser {
             if (!foundFree) {
                 throw new RegisterAllocationException("No free registers!");
             }
-
-            // Set the symbol's register for quick returns later
-            theSymbol.setRegister(register);
         }
 
         return register;
@@ -358,14 +385,30 @@ public class Parser {
         Arrays.fill(_registers, null);
     }
 
+    /**
+     * Increment the number of variables counter, to be used
+     * as an offset on the ARM stack
+     *
+     * @return the new variable number count
+     */
     public int incrementVariableNumber() {
         return ++_numVars;
     }
 
+    /**
+     * Increment the number of labels for the begin and end labels
+     *
+     * @return the new number of labels
+     */
     public int incrementNumLabels() {
         return ++_numLabels;
     }
 
+    /**
+     * Emit some ARM assembly or other data to the "output"
+     *
+     * @param line the line to output
+     */
     public void emitToOutput(String line) {
         getOutput()
             .append(line);

@@ -45,7 +45,11 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Do default Action behavior
             super.doTheThing(theParser);
+
+            // Tell the parser to clear all registers
             theParser.clearRegisters();
         }
     },
@@ -194,8 +198,9 @@ public enum Action implements Token {
                 // Emit the branch instruction to the current end label
                 theParser.emitToOutput(
                     String.format(
-                        "\t%s end%s\n",
+                        "\t%s %s%s\n",
                         operation,
+                        Parser.END_LABEL_PREFIX,
                         theParser.getLabelStack().peek()
                     )
                 );
@@ -246,6 +251,7 @@ public enum Action implements Token {
                 );
             }
 
+            // "Bump" the stack pointer
             // TODO Add scope-aware semantics
             // TODO Aggregate all stack ptr add instructions
             theParser.emitToOutput("\tadd sp, sp, #-4\n");
@@ -286,8 +292,11 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Do the default Action behavior
             super.doTheThing(theParser);
 
+            // Push a new label number onto the label stack
             theParser.getLabelStack().push(
                 theParser.incrementNumLabels()
             );
@@ -301,10 +310,17 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Do default Action behavior
             super.doTheThing(theParser);
 
+            // Branch to the top of stack begin label
             theParser.emitToOutput(
-                String.format("\tb begin%d\n", theParser.getLabelStack().peek())
+                String.format(
+                    "\tb %s%d\n",
+                    Parser.BEGIN_LABEL_PREFIX,
+                    theParser.getLabelStack().peek()
+                )
             );
         }
     },
@@ -316,7 +332,11 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Do the default behavior of the Action
             super.doTheThing(theParser);
+
+            // Pop the top labels off the stack
             theParser.getLabelStack().pop();
         }
     },
@@ -328,8 +348,17 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Do the default behavior of the Action
             super.doTheThing(theParser);
-            theParser.emitToOutput("\tldr r0, =ifmt\n");
+
+            // Emit the string format load into r0
+            theParser.emitToOutput(
+                String.format(
+                    "\tldr r0, =%s\n",
+                    Parser.INTEGER_FORMAT_NAME
+                )
+            );
         }
     },
 
@@ -340,14 +369,27 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Do the default Action behavior
             super.doTheThing(theParser);
 
-            Symbol theSymbolToPrint = theParser.getOperandStack().pop();
-            int register = theParser.getRegister(theSymbolToPrint);
+            Symbol theSymbolToPrint;
 
-            theParser.emitToOutput(String.format("\tmov r1, r%d\n", register));
+            // Pop the symbol to print off the operand stack
+            theSymbolToPrint = theParser.getOperandStack().pop();
+
+            // Move it into the register r1
+            theParser.emitToOutput(
+                String.format(
+                    "\tmov r1, r%d\n",
+                    theParser.getRegister(theSymbolToPrint)
+                )
+            );
+
+            // Branch-and-link to printf
             theParser.emitToOutput("\tbl printf\n");
 
+            // Free the symbol from its register
             theParser.freeRegister(theSymbolToPrint);
         }
     },
@@ -359,9 +401,17 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Do the default behavior of the Action
             super.doTheThing(theParser);
 
-            theParser.emitToOutput("\tldr r0, =sfmt\n");
+            // Emit the string format load into r0
+            theParser.emitToOutput(
+                String.format(
+                    "\tldr r0, =%s\n",
+                    Parser.STRING_FORMAT_NAME
+                )
+            );
         }
     },
 
@@ -374,30 +424,32 @@ public enum Action implements Token {
         public void doTheThing(Parser theParser) throws CompilerException {
             super.doTheThing(theParser);
 
-            Symbol theSign = theParser.getOperatorStack().pop();
-            Symbol theOperand = theParser.getOperandStack().pop();
-            Symbol newAnonymousSymbol = new Symbol();
+            Symbol theSign;
+            Symbol theOperand;
+            Symbol newAnonymousSymbol;
+            String operation;
+
+            // Pop from the operator and operand stacks and create
+            // a new anonymous symbol
+            theSign = theParser.getOperatorStack().pop();
+            theOperand = theParser.getOperandStack().pop();
+            newAnonymousSymbol = new Symbol();
+            operation = "mov";
 
             // Negate if the operator is a negative sign
             if (theSign.getLexeme().getValue().equals("-")) {
-                theParser.emitToOutput(
-                    String.format(
-                        "\tneg r%d, r%d\n",
-                        theParser.getRegister(newAnonymousSymbol),
-                        theParser.getRegister(theOperand)
-                    )
-                );
+                operation = "neg";
             }
-            // Otherwise, it is a positive number, use a simple move
-            else {
-                theParser.emitToOutput(
-                    String.format(
-                        "\tmov r%d, r%d\n",
-                        theParser.getRegister(newAnonymousSymbol),
-                        theParser.getRegister(theOperand)
-                    )
-                );
-            }
+
+            // Emit the move or negation instruction to the Parser
+            theParser.emitToOutput(
+                String.format(
+                    "\t%s r%d, r%d\n",
+                    operation,
+                    theParser.getRegister(newAnonymousSymbol),
+                    theParser.getRegister(theOperand)
+                )
+            );
 
             // Free the operand's register
             theParser.freeRegister(theOperand);
@@ -426,7 +478,10 @@ public enum Action implements Token {
             // Get the second operand off the stack and get the
             lhs = theParser.getOperandStack().pop();
 
+            // Store the rhs into the lhs if it is allocated, else
+            // throw an exception indicating the lhs is not defined
             if (lhs.getVariableNumber() != Parser.NOT_ALLOCATED) {
+
                 // Emit the str instruction, getting the variable number of the
                 // left hand side and computing the offset to store the rhs
                 // in the proper memory location
@@ -506,7 +561,7 @@ public enum Action implements Token {
             throws CompilerException
         {
 
-            // Perform the default
+            // Perform the default behavior of the Action token
             super.doTheThing(theParser);
 
             // Emit the program quit boilerplate
@@ -525,10 +580,9 @@ public enum Action implements Token {
                 """
             );
 
+            // Emit each string in the constant pool in the data
+            // section
             for (String key : theParser.getStringConstants().keySet()) {
-
-                // Emit each string in the constant pool in the data
-                // section
                 theParser.emitToOutput(
                     String.format(
                         """

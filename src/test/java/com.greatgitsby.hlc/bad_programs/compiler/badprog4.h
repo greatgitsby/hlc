@@ -1,5 +1,5 @@
 {
-This is Euclid's method for computing the 
+This is Euclid's method for computing the
 Greatest Common Divisor
 }
 
@@ -21,7 +21,6 @@ begin
           v := t
        end;
        u := u - v
-
 
     print "gcd: ";
     print v;

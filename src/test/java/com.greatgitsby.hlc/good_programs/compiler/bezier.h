@@ -18,7 +18,7 @@ begin
     variable result;
 
     { Set up example values for the inputs }
-    po := 0;
+    p0 := 0;
     p1 := 0 - 15;
     p2 := 10;
     t := 1 / 10;

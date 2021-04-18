@@ -28,24 +28,25 @@ public class CompilerTest {
      */
     @ParameterizedTest(name = "Compiler - Good Program {index}: {0}")
     @MethodSource("provideGoodProgramCompilerFilenames")
-    void test_compiler_GoodPrograms(String filename) throws IOException, CompilerException {
+    void test_compiler_GoodPrograms(String filename)
+        throws IOException, CompilerException
+    {
         Parser p = new Parser(
             new LexicalAnalyzer(resolveGoodCompilerFile(filename))
         );
 
         System.out.printf("--- PROGRAM %s ---------%n", filename);
 
-        if (p.isValidSyntax()) {
-            System.out.println(p.dumpOutput());
-        }
+        System.out.println(p.dumpOutput());
 
-        File f = new File(resolveGoodCompilerFile("out/" + filename.replace(".h", ".s")));
+        FileWriter f1 =
+            new FileWriter(
+                "./src/test/output/programs/YYY_" + filename.replace(".h", ".s")
+            );
 
-        FileWriter w = new FileWriter(f);
+        f1.write(p.dumpOutput());
 
-        w.write(p.dumpOutput());
-
-        w.close();
+        f1.close();
 
         Assertions.assertTrue(true);
     }
@@ -61,20 +62,14 @@ public class CompilerTest {
     @MethodSource("provideBadProgramCompilerFilenames")
     void test_compiler_BadPrograms(String filename) {
         Assertions.assertThrows(CompilerException.class, () -> {
-            Parser p = new Parser(
+            new Parser(
                 new LexicalAnalyzer(resolveBadCompilerFile(filename))
             );
-
-            p.isValidSyntax();
         });
     }
 
     /**
      * Test a program file against the full compiler experience
-     *
-     * @param filename the file to test
-     * @throws IOException if there was a file error
-     * @throws SyntaxErrorException if the code was syntactically invalid
      */
     @Test()
     void test_compiler_BadProgram() {
@@ -84,8 +79,6 @@ public class CompilerTest {
                     resolveBadCompilerFile("badprog3.h")
                 )
             );
-
-            p.isValidSyntax();
 
             System.out.println(p.dumpOutput());
         });
@@ -101,11 +94,11 @@ public class CompilerTest {
     @ParameterizedTest(name = "Parser - Good Program {index}: {0}")
     @MethodSource("provideGoodProgramParserFilenames")
     void test_parser_GoodPrograms(String filename) throws IOException, CompilerException {
-        Assertions.assertTrue(
-            new Parser(
-                new LexicalAnalyzer(resolveGoodParserFile(filename))
-            ).isValidSyntax()
+        new Parser(
+            new LexicalAnalyzer(resolveGoodParserFile(filename))
         );
+
+        Assertions.assertTrue(true);
     }
 
     /**
@@ -120,7 +113,7 @@ public class CompilerTest {
             try {
                 new Parser(
                     new LexicalAnalyzer(resolveBadParserFile(filename))
-                ).isValidSyntax();
+                );
             } catch (CompilerException e) {
                 e.printStackTrace();
                 throw e;

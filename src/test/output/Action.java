@@ -1,6 +1,8 @@
 package com.greatgitsby.hlc;
 
+import java.util.ArrayDeque;
 import java.util.Date;
+import java.util.NoSuchElementException;
 
 /**
  * Action
@@ -65,14 +67,12 @@ public enum Action implements Token {
             // Perform the default behavior for Actions
             super.doTheThing(theParser);
 
-            // Variables
             Symbol rhs;
             Symbol lhs;
             Symbol operator;
             Symbol result;
             String operation;
 
-            // Create a new anonymous symbol
             result = new Symbol();
             operation = "";
 

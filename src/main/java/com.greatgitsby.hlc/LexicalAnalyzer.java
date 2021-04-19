@@ -309,13 +309,16 @@ public class LexicalAnalyzer {
                 // If we have hit the END_STRING_CONST character,
                 // it is time to move to the STRING_CONST state
                 if (normalizedChar == END_STRING_CONST) {
+
+                    // If the previous character is not an escape character,
+                    // we know to close the string
                     if (_prevChar != ESCAPE_CHAR) {
                         _currentState = State.STRING_CONST;
-                    } else {
+                    }
+                    // Otherwise, stay consuming characters
+                    else {
                         _currentState = State.IN_STRING;
                     }
-                } else if (_currentChar == ESCAPE_CHAR) {
-                    _currentState = State.IN_STRING;
                 }
 
                 // Read in the next character from the file stream

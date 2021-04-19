@@ -62,46 +62,29 @@ public enum Action implements Token {
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
 
-            // Perform the default behavior for Actions
-            super.doTheThing(theParser);
-
             // Variables
             Symbol rhs;
             Symbol lhs;
             Symbol operator;
-            Symbol result;
+            Symbol newAnonymousSymbol;
             String operation;
 
+            // Perform the default behavior for Actions
+            super.doTheThing(theParser);
+
             // Create a new anonymous symbol
-            result = new Symbol();
+            newAnonymousSymbol = new Symbol();
             operation = "";
 
+            // Pop the operator off of the top of stack
             operator = theParser.getOperatorStack().pop();
 
+            // Get the right hand side from the operand stack
+            rhs = theParser.getOperandStack().pop();
+
+            // Get the left hand side from the operand stack
+            // if the stack is not empty
             if (!theParser.getOperandStack().isEmpty()) {
-
-                // Get the right hand side from the operand stack
-                rhs = theParser.getOperandStack().pop();
-            } else {
-
-                // If operand stack is empty, this means the LHS is missing
-                // from the source code since there was only one thing
-                // pushed onto the stack
-                throw new CompilerException(
-                    String.format(
-                        "Line %d Char %d - " +
-                        "Missing LHS of expression \"%s\"",
-
-                        operator.getLexeme().getLineNumber(),
-                        operator.getLexeme().getBeginningCharNumber(),
-                        operator.getLexeme().getValue()
-                    )
-                );
-            }
-
-            if (!theParser.getOperandStack().isEmpty()) {
-
-                // Get the left hand side from the operand stack
                 lhs = theParser.getOperandStack().pop();
             } else {
 
@@ -123,46 +106,42 @@ public enum Action implements Token {
 
             // Additive op [ +, - ]
             if (
-                TerminalToken.ADDITIVE_OP
-                    .equals(operator.getLexeme().getTokenType())
+                operator.getLexeme().getTokenType()
+                    .equals(TerminalToken.ADDITIVE_OP)
             ) {
 
-                // Subtraction
+                // Default operation is "add"
+                operation = "add";
+
+                // If the operator is a "-" then the operation is
+                // a subtraction
                 if (operator.getLexeme().getValue().equals("-")) {
-
-                    // Emit the subtract operation
-                    // sub Rd, Rs, Rs
-                    theParser.emitToOutput(
-                        String.format(
-                            "\tsub r%d, r%d, r%d\n",
-                            theParser.getRegister(result),
-                            theParser.getRegister(lhs),
-                            theParser.getRegister(rhs)
-                        )
-                    );
-                }
-                // Addition
-                else {
-
-                    // Emit the add operation
-                    // add Rd, Rs, Rs
-                    theParser.emitToOutput(
-                        String.format(
-                            "\tadd r%d, r%d, r%d\n",
-                            theParser.getRegister(result),
-                            theParser.getRegister(lhs),
-                            theParser.getRegister(rhs)
-                        )
-                    );
+                    operation = "sub";
                 }
 
-                // Push the result temporary register onto the operand stack
-                theParser.getOperandStack().push(result);
+                // Emit the operation
+                // "operation" Rd, Rs, Rs
+                theParser.emitToOutput(
+                    String.format(
+                        """
+                        \t%s r%d, r%d, r%d
+                        """,
+
+                        operation,
+                        theParser.getRegister(newAnonymousSymbol),
+                        theParser.getRegister(lhs),
+                        theParser.getRegister(rhs)
+                    )
+                );
+
+                // Push the new temporary symbol onto the operand stack
+                // to be used in a future operation
+                theParser.getOperandStack().push(newAnonymousSymbol);
             }
             // Multiplicative operation [ *, / ]
             else if (
-                TerminalToken.MULTIPLICATIVE_OP
-                    .equals(operator.getLexeme().getTokenType())
+                operator.getLexeme().getTokenType()
+                    .equals(TerminalToken.MULTIPLICATIVE_OP)
             ) {
 
                 // Divide
@@ -170,7 +149,8 @@ public enum Action implements Token {
 
                     // Output the divide instruction with the boilerplate
                     // to branch to the libgcc __aeabi_idiv function that
-                    // handles integer division
+                    // handles integer division. The numerator and denominator
+                    // must be placed in r0 and r1 respectively
                     theParser.emitToOutput(
                         String.format(
                             """
@@ -179,9 +159,10 @@ public enum Action implements Token {
                             \tbl __aeabi_idiv
                             \tmov r%d, r0
                             """,
+
                             theParser.getRegister(lhs),
                             theParser.getRegister(rhs),
-                            theParser.getRegister(result)
+                            theParser.getRegister(newAnonymousSymbol)
                         )
                     );
                 }
@@ -192,8 +173,11 @@ public enum Action implements Token {
                     // mul Rd, Rs, Rs
                     theParser.emitToOutput(
                         String.format(
-                            "\tmul r%d, r%d, r%d\n",
-                            theParser.getRegister(result),
+                            """
+                            \tmul r%d, r%d, r%d
+                            """,
+
+                            theParser.getRegister(newAnonymousSymbol),
                             theParser.getRegister(lhs),
                             theParser.getRegister(rhs)
                         )
@@ -201,26 +185,30 @@ public enum Action implements Token {
                 }
 
                 // Push the result temporary register onto the operand stack
-                theParser.getOperandStack().push(result);
+                theParser.getOperandStack().push(newAnonymousSymbol);
             }
             // Relational operator [ <, <=, <>, =, >, >= ]
             else if (
-                TerminalToken.RELATIONAL_OP
-                    .equals(operator.getLexeme().getTokenType())
+                operator.getLexeme().getTokenType()
+                    .equals(TerminalToken.RELATIONAL_OP)
             ) {
 
                 // Emit the comparison for the right hand side and the left
                 // hand side
                 theParser.emitToOutput(
                     String.format(
-                        "\tcmp r%d, r%d\n",
+                        """
+                        \tcmp r%d, r%d
+                        """,
+
                         theParser.getRegister(lhs),
                         theParser.getRegister(rhs)
                     )
                 );
 
                 // Determine which "branch on false" should be selected
-                // based on their
+                // based on the operation. It should be the opposite of the
+                // operation as indicated by the source code
                 switch (operator.getLexeme().getValue()) {
                 case "<":
                     operation = "bge";
@@ -245,7 +233,10 @@ public enum Action implements Token {
                 // Emit the branch instruction to the current end label
                 theParser.emitToOutput(
                     String.format(
-                        "\t%s %s%s\n",
+                        """
+                        \t%s %s%s
+                        """,
+
                         operation,
                         Parser.END_LABEL_PREFIX,
                         theParser.getLabelStack().peek()
@@ -254,7 +245,8 @@ public enum Action implements Token {
             }
 
             // Release the left hand side and right hand side symbols from
-            // their registers
+            // their registers. We will not free the temporary register
+            // as it will be used immediately following this operation
             theParser.freeRegister(lhs);
             theParser.freeRegister(rhs);
         }
@@ -268,10 +260,11 @@ public enum Action implements Token {
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
 
+            // Variables
+            Symbol theOperand;
+
             // Perform the default behavior for Action symbols
             super.doTheThing(theParser);
-
-            Symbol theOperand;
 
             // Pop the operand from the top of the operand stack
             theOperand = theParser.getOperandStack().pop();
@@ -282,14 +275,13 @@ public enum Action implements Token {
                 theOperand.setVariableNumber(
                     theParser.incrementVariableNumber()
                 );
-            }
-            // Variable is already declared, throw an exception
-            else {
+            } else {
 
-                // TODO Add scope to message
+                // Variable is already declared, throw an exception
                 throw new VariableAlreadyDefinedException(
                     String.format(
                         "Line %d Char %d - Variable %s is already defined",
+
                         theOperand.getLexeme().getLineNumber(),
                         theOperand.getLexeme().getBeginningCharNumber(),
                         theOperand.getLexeme().getValue()
@@ -300,7 +292,11 @@ public enum Action implements Token {
             // "Bump" the stack pointer
             // TODO Add scope-aware semantics
             // TODO Aggregate all stack ptr add instructions
-            theParser.emitToOutput("\tadd sp, sp, #-4\n");
+            theParser.emitToOutput(
+                """
+                \tadd sp, sp, #-4
+                """
+            );
         }
     },
 
@@ -363,7 +359,10 @@ public enum Action implements Token {
             // Branch to the top of stack begin label
             theParser.emitToOutput(
                 String.format(
-                    "\tb %s%d\n",
+                    """
+                    \tb %s%d
+                    """,
+
                     Parser.BEGIN_LABEL_PREFIX,
                     theParser.getLabelStack().peek()
                 )
@@ -401,7 +400,10 @@ public enum Action implements Token {
             // Emit the string format load into r0
             theParser.emitToOutput(
                 String.format(
-                    "\tldr r0, =%s\n",
+                    """
+                    \tldr r0, =%s
+                    """,
+
                     Parser.INTEGER_FORMAT_NAME
                 )
             );
@@ -416,10 +418,11 @@ public enum Action implements Token {
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
 
+            // Variables
+            Symbol theSymbolToPrint;
+
             // Do the default Action behavior
             super.doTheThing(theParser);
-
-            Symbol theSymbolToPrint;
 
             // Pop the symbol to print off the operand stack
             theSymbolToPrint = theParser.getOperandStack().pop();
@@ -427,7 +430,10 @@ public enum Action implements Token {
             // Move it into the register r1
             theParser.emitToOutput(
                 String.format(
-                    "\tmov r1, r%d\n",
+                    """
+                    \tmov r1, r%d
+                    """,
+
                     theParser.getRegister(theSymbolToPrint)
                 )
             );
@@ -454,7 +460,10 @@ public enum Action implements Token {
             // Emit the string format load into r0
             theParser.emitToOutput(
                 String.format(
-                    "\tldr r0, =%s\n",
+                    """
+                    \tldr r0, =%s
+                    """,
+
                     Parser.STRING_FORMAT_NAME
                 )
             );
@@ -468,21 +477,28 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
-            super.doTheThing(theParser);
 
+            // Variables
             Symbol theSign;
             Symbol theOperand;
             Symbol newAnonymousSymbol;
             String operation;
+
+            // Perform the default Action behavior
+            super.doTheThing(theParser);
 
             // Pop from the operator and operand stacks and create
             // a new anonymous symbol
             theSign = theParser.getOperatorStack().pop();
             theOperand = theParser.getOperandStack().pop();
             newAnonymousSymbol = new Symbol();
+
+            // Default operation is to move; the sign is the
+            // add operator
             operation = "mov";
 
-            // Negate if the operator is a negative sign
+            // Perform the negation operation if the operator
+            // is a negative sign
             if (theSign.getLexeme().getValue().equals("-")) {
                 operation = "neg";
             }
@@ -490,7 +506,10 @@ public enum Action implements Token {
             // Emit the move or negation instruction to the Parser
             theParser.emitToOutput(
                 String.format(
-                    "\t%s r%d, r%d\n",
+                    """
+                    \t%s r%d, r%d
+                    """,
+
                     operation,
                     theParser.getRegister(newAnonymousSymbol),
                     theParser.getRegister(theOperand)
@@ -512,6 +531,8 @@ public enum Action implements Token {
          */
         @Override
         public void doTheThing(Parser theParser) throws CompilerException {
+
+            // Variables
             Symbol rhs;
             Symbol lhs;
             Symbol operator;
@@ -558,12 +579,17 @@ public enum Action implements Token {
                 // in the proper memory location
                 theParser.emitToOutput(
                     String.format(
-                        "\tstr r%d, [fp, #%d]\n",
+                        """
+                        \tstr r%d, [fp, #%d]
+                        """,
                         theParser.getRegister(rhs),
                         Parser.LOCAL_VAR_OFFSET * lhs.getVariableNumber()
                     )
                 );
             } else {
+
+                // Variable is not defined, throw an exception indicating
+                // where the
                 throw new VariableNotDefinedException(
                     String.format(
                         "Line %d Char %d - Variable %s is not defined",
@@ -616,7 +642,6 @@ public enum Action implements Token {
                     \tpush { lr }
                     \tmov fp, sp
                     """,
-
                     theParser.getLexicalAnalyzer().getFileName(),
                     new Date()
                 )

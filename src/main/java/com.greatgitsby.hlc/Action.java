@@ -68,6 +68,7 @@ public enum Action implements Token {
             Symbol operator;
             Symbol newAnonymousSymbol;
             String operation;
+            Token operatorToken;
 
             // Perform the default behavior for Actions
             super.doTheThing(theParser);
@@ -79,6 +80,9 @@ public enum Action implements Token {
             // Pop the operator off of the top of stack
             operator = theParser.getOperatorStack().pop();
 
+            // Get the operator's token type
+            operatorToken = operator.getLexeme().getTokenType();
+
             // Get the right hand side from the operand stack
             rhs = theParser.getOperandStack().pop();
 
@@ -88,7 +92,7 @@ public enum Action implements Token {
                 lhs = theParser.getOperandStack().pop();
             } else {
 
-                // If operand stack is empty, this means the LHS is missing
+                // If operand stack is empty, this means the RHS is missing
                 // from the source code since there was only one thing
                 // pushed onto the stack
                 throw new CompilerException(
@@ -105,10 +109,7 @@ public enum Action implements Token {
             }
 
             // Additive op [ +, - ]
-            if (
-                operator.getLexeme().getTokenType()
-                    .equals(TerminalToken.ADDITIVE_OP)
-            ) {
+            if (operatorToken.equals(TerminalToken.ADDITIVE_OP)) {
 
                 // Default operation is "add"
                 operation = "add";
@@ -139,10 +140,7 @@ public enum Action implements Token {
                 theParser.getOperandStack().push(newAnonymousSymbol);
             }
             // Multiplicative operation [ *, / ]
-            else if (
-                operator.getLexeme().getTokenType()
-                    .equals(TerminalToken.MULTIPLICATIVE_OP)
-            ) {
+            else if (operatorToken.equals(TerminalToken.MULTIPLICATIVE_OP)) {
 
                 // Divide
                 if (operator.getLexeme().getValue().equals("/")) {
@@ -188,10 +186,7 @@ public enum Action implements Token {
                 theParser.getOperandStack().push(newAnonymousSymbol);
             }
             // Relational operator [ <, <=, <>, =, >, >= ]
-            else if (
-                operator.getLexeme().getTokenType()
-                    .equals(TerminalToken.RELATIONAL_OP)
-            ) {
+            else if (operatorToken.equals(TerminalToken.RELATIONAL_OP)) {
 
                 // Emit the comparison for the right hand side and the left
                 // hand side
@@ -210,22 +205,46 @@ public enum Action implements Token {
                 // based on the operation. It should be the opposite of the
                 // operation as indicated by the source code
                 switch (operator.getLexeme().getValue()) {
+
+                // Less than
                 case "<":
+
+                    // Greater than or equal to
                     operation = "bge";
                     break;
+
+                // Less than or equal to
                 case "<=":
+
+                    // Greater than
                     operation = "bgt";
                     break;
+
+                // Not equal to
                 case "<>":
+
+                    // Equal to
                     operation = "beq";
                     break;
+
+                // Equal to
                 case "=":
+
+                    // Not equal to
                     operation = "bne";
                     break;
+
+                // Greater than
                 case ">":
+
+                    // Less than or equal to
                     operation = "ble";
                     break;
+
+                // Greater than or equal to
                 case ">=":
+
+                    // Less than
                     operation = "blt"; // Yum
                     break;
                 }
@@ -275,9 +294,9 @@ public enum Action implements Token {
                 theOperand.setVariableNumber(
                     theParser.incrementVariableNumber()
                 );
-            } else {
-
-                // Variable is already declared, throw an exception
+            }
+            // Variable is already declared, throw an exception
+            else {
                 throw new VariableAlreadyDefinedException(
                     String.format(
                         "Line %d Char %d - Variable %s is already defined",
@@ -320,10 +339,78 @@ public enum Action implements Token {
                    .balign 4
                    %s%d:
                    """,
+
                    Parser.END_LABEL_PREFIX,
                    theParser.getLabelStack().peek()
                )
             );
+        }
+    },
+
+    EPILOGUE() {
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void doTheThing(Parser theParser)
+            throws CompilerException
+        {
+
+            // Variables
+            String stringConstantValue;
+
+            // Perform the default behavior of the Action token
+            super.doTheThing(theParser);
+
+            // Emit the program quit boilerplate
+            theParser.emitToOutput(
+                """
+                
+                .text
+                .balign 4
+                quit:
+                \tmov sp, fp
+                \tpop { lr }
+                \tmov r0, #0
+                \tbx lr
+                
+                /********************
+                 *                  *
+                 * STRING CONSTANTS *
+                 *                  *
+                 ********************/
+                .data
+                """
+            );
+
+            // Emit each string in the constant pool into the data
+            // section
+            for (String key : theParser.getStringConstants().keySet()) {
+
+                // Get the string constant value
+                stringConstantValue = theParser
+                    .getStringConstants()
+                    .get(key)
+                    .getLexeme()
+                    .getValue();
+
+                // Emit the .data entry with key and value for name and
+                // .asciz value
+                theParser.emitToOutput(
+                    String.format(
+                        """
+                        .balign 4
+                        %s:
+                        \t.asciz %s
+                        
+                        """,
+
+                        stringConstantValue,
+                        key
+                    )
+                );
+            }
         }
     },
 
@@ -582,6 +669,7 @@ public enum Action implements Token {
                         """
                         \tstr r%d, [fp, #%d]
                         """,
+
                         theParser.getRegister(rhs),
                         Parser.LOCAL_VAR_OFFSET * lhs.getVariableNumber()
                     )
@@ -631,72 +719,37 @@ public enum Action implements Token {
                      *                                      *
                      ****************************************/
                      
+                    /*************
+                     *           *
+                     * EXTERNALS *
+                     *           *
+                     *************/
                     .extern printf
                     .extern __aeabi_idiv
                      
+                    /***************
+                     *             *
+                     * ENTRY POINT *
+                     *             *
+                     ***************/
                     .global main
                     
+                    /********
+                     *      *
+                     * MAIN *
+                     *      *
+                     ********/
                     .text
                     .balign 4
                     main:
                     \tpush { lr }
                     \tmov fp, sp
                     """,
+
                     theParser.getLexicalAnalyzer().getFileName(),
                     new Date()
                 )
             );
-        }
-    },
-    EPILOGUE() {
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void doTheThing(Parser theParser)
-            throws CompilerException
-        {
-
-            // Perform the default behavior of the Action token
-            super.doTheThing(theParser);
-
-            // Emit the program quit boilerplate
-            theParser.emitToOutput(
-                """
-                
-                .text
-                .balign 4
-                quit:
-                \tmov sp, fp
-                \tpop { lr }
-                \tmov r0, #0
-                \tbx lr
-                
-                .data
-                """
-            );
-
-            // Emit each string in the constant pool in the data
-            // section
-            for (String key : theParser.getStringConstants().keySet()) {
-                theParser.emitToOutput(
-                    String.format(
-                        """
-                        .balign 4
-                        %s:
-                        \t.asciz %s
-                        
-                        """,
-                        theParser
-                            .getStringConstants()
-                            .get(key)
-                            .getLexeme()
-                            .getValue(),
-                        key
-                    )
-                );
-            }
         }
     };
 
@@ -704,9 +757,7 @@ public enum Action implements Token {
      * {@inheritDoc}
      */
     @Override
-    public void doTheThing(Parser theParser)
-        throws CompilerException
-    {
+    public void doTheThing(Parser theParser) throws CompilerException {
         // Remove action from parse stack
         theParser.getParseStack().pop();
     }

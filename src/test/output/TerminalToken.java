@@ -64,8 +64,11 @@ public enum TerminalToken implements Token {
             throws CompilerException, IOException
         {
 
+            // Variables
+            Symbol theSymbolInTheTable;
+
             // Get the symbol from the symbol table
-            Symbol theSymbolInTheTable =
+            theSymbolInTheTable =
                 theParser
                     .getLexicalAnalyzer()
                     .getSymbolTable()
@@ -158,6 +161,8 @@ public enum TerminalToken implements Token {
         public void doTheThing(Parser theParser)
             throws CompilerException, IOException
         {
+
+            // Variables
             Symbol newStringSymbol;
 
             // Add the string to the string constant pool
@@ -166,6 +171,7 @@ public enum TerminalToken implements Token {
                     .getStringConstants()
                     .containsKey(theParser.getCurrentLexeme().getValue())
             ) {
+
                 // Construct a new symbol and lexeme to take the place
                 // of the string constant from the Lexical Analyzer
                 newStringSymbol = new Symbol(new Lexeme(
@@ -240,6 +246,7 @@ public enum TerminalToken implements Token {
             throw new CompilerException(
                 String.format(
                     "Line %d Char %d - Expected %s, Got %s",
+
                     theParser.getLexicalAnalyzer().getLineNumber(),
                     theParser.getLexicalAnalyzer().getCharacterNumber(),
                     theParser.getCurrentLexeme(),

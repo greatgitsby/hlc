@@ -1,0 +1,81 @@
+# Bad Program Output
+
+## badprog1.h
+```bash
+com.greatgitsby.hlc.VariableNotDefinedException:
+    Line 17 Char 12 - Variable t is not defined
+```
+
+---
+
+## badprog2.h
+```bash
+com.greatgitsby.hlc.CompilerException:
+    Line 12 Char 6 - Missing RHS of expression "v := ???"
+```
+
+---
+
+## badprog3.h
+```bash
+com.greatgitsby.hlc.CompilerException:
+    Line 17 Char 12 - Missing RHS of expression "u < ???"
+```
+
+---
+
+## badprog4.h
+```bash
+com.greatgitsby.hlc.SyntaxErrorException:
+    Line 25 Char 11 - Expected END, MULTIPLICATIVE_OP,
+    ELSE, THEN, END_OF_INPUT, RELATIONAL_OP, DO,
+    STATEMENT_SEP, RIGHT_PAREN, or ADDITIVE_OP - Got MULTIPLICATION
+```
+
+---
+
+## badprog5.h
+```bash
+com.greatgitsby.hlc.SyntaxErrorException:
+    Line 27 Char 13 - Invalid Syntax
+```
+
+---
+
+## badprog6.h
+```bash
+com.greatgitsby.hlc.VariableAlreadyDefinedException:
+    Line 16 Char 15 - Variable n is already defined
+```
+
+---
+
+## badprog7.h
+```bash
+com.greatgitsby.hlc.CompilerException:
+    Line 49 Char 1 - Expected END (end), Got END_OF_INPUT
+```
+
+---
+
+## badprog8.h
+```bash
+com.greatgitsby.hlc.SyntaxErrorException:
+    Line 51 Char 1 - Expected END or STATEMENT_SEP - Got SEPARATED_LIST
+```
+
+---
+
+## badprog9.h
+```bash
+com.greatgitsby.hlc.VariableAlreadyDefinedException:
+    Line 16 Char 15 - Variable n is already defined
+```
+
+---
+
+## badprog10.h
+```bash
+com.greatgitsby.hlc.VariableAlreadyDefinedException:
+    Line 16 Char 15 - Variable n is already defined
+```

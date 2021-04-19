@@ -9,7 +9,7 @@ import java.util.NoSuchElementException;
 
 /**
  * LexicalAnalyzer
- * <p>
+ *
  * Performs the lexical analysis of an input file as conforming
  * to the Hansen programming language. It is a table-driven
  * finite state automata backed by a symbol table that remembers
@@ -31,7 +31,7 @@ public class LexicalAnalyzer {
 
     // Private immutable instance variables
     private final HashMap<State, HashMap<Character, State>> _stateTable;
-    private final HashMap<String, TerminalToken>            _keywordTable;
+    private final HashMap<String, TerminalToken>            _reservedWords;
     private final HashMap<String, Symbol>                   _symbolTable;
     private final LineNumberReader                          _fileReader;
     private final String                                    _filename;
@@ -47,22 +47,20 @@ public class LexicalAnalyzer {
      * Constructs a new Lexical Analyzer, parsing an input file
      * into a set of Symbols
      *
-     * @param filepath the path to the input file
-     * @throws IOException              if the file does not exist or a read
-     *                                  error occurs
-     * @throws IllegalArgumentException if the filepath is null
-     * @throws SyntaxErrorException     if the input file is invalid
+     * @param filepath      the path to the input file
+     * @throws IOException  if the file does not exist or a read
+     *                      error occurs
      */
-    public LexicalAnalyzer(String filepath)
-        throws IOException, IllegalArgumentException, SyntaxErrorException
-    {
-        File theFile;
+    public LexicalAnalyzer(String filepath) throws IOException {
+
+        // Variables
         HashMap<Character, State> startMap;
         HashMap<Character, State> numberMap;
         HashMap<Character, State> symbolMap;
         HashMap<Character, State> lessThanMap;
         HashMap<Character, State> greaterThanMap;
         HashMap<Character, State> colonMap;
+        File                      theFile;
 
         // Initialize internal state
         _stateTable    = new HashMap<>();
@@ -82,14 +80,15 @@ public class LexicalAnalyzer {
         // Set line number to first line, 1
         _fileReader.setLineNumber(1);
 
-        _filename = theFile.getName();
+        // Set the filename of the input file, removing the
+        // extension if it exists
+        _filename = theFile.getName().replaceFirst("[.][^.]+$", "");
 
         // Read in the first character from the file reader
         _currentChar = _fileReader.read();
 
-        // Insert all of our reserved keywords as "symbols" in
-        // our symbol table
-        _keywordTable = new HashMap<>() {{
+        // Insert all of our reserved keywords as Tokens
+        _reservedWords = new HashMap<>() {{
             put("variable", TerminalToken.VARIABLE);
             put("print", TerminalToken.PRINT);
             put("if", TerminalToken.IF);
@@ -177,10 +176,6 @@ public class LexicalAnalyzer {
         // Insert GREATER_THAN state machine into state table
         getStateTable().put(State.GREATER_THAN, greaterThanMap);
 
-        // Insert GREATER_THAN_EQUAL_TO state machine (no transitions other
-        // than START)
-        getStateTable().put(State.GREATER_THAN_EQUAL_TO, new HashMap<>());
-
         // LESS_THAN machine states
         lessThanMap.put('>', State.NOT_EQUAL_TO);
         lessThanMap.put('=', State.LESS_THAN_EQUAL_TO);
@@ -193,6 +188,10 @@ public class LexicalAnalyzer {
 
         // Insert COLON state map into the state table
         getStateTable().put(State.COLON, colonMap);
+
+        // Insert GREATER_THAN_EQUAL_TO state machine (no transitions other
+        // than START)
+        getStateTable().put(State.GREATER_THAN_EQUAL_TO, new HashMap<>());
 
         // Insert LESS_THAN_EQUAL_TO state machine (no transitions other than
         // START)
@@ -220,16 +219,16 @@ public class LexicalAnalyzer {
         // Insert STATEMENT_SEP state machine (no transitions other than START)
         getStateTable().put(State.STATEMENT_SEP, new HashMap<>());
 
-        // Insert STATEMENT_SEP state machine (no transitions other than START)
+        // Insert IN_COMMENT state machine (no transitions other than START)
         getStateTable().put(State.IN_COMMENT, new HashMap<>());
 
-        // Insert STATEMENT_SEP state machine (no transitions other than START)
+        // Insert COMMENT state machine (no transitions other than START)
         getStateTable().put(State.COMMENT, new HashMap<>());
 
-        // Insert STATEMENT_SEP state machine (no transitions other than START)
+        // Insert IN_STRING state machine (no transitions other than START)
         getStateTable().put(State.IN_STRING, new HashMap<>());
 
-        // Insert STATEMENT_SEP state machine (no transitions other than START)
+        // Insert STRING_CONST state machine (no transitions other than START)
         getStateTable().put(State.STRING_CONST, new HashMap<>());
 
         // Insert ASSIGNMENT_OP state machine (no transitions other than START)
@@ -243,10 +242,11 @@ public class LexicalAnalyzer {
      * @throws NoSuchElementException if there are no more lexemes to return
      */
     public Lexeme nextSymbol() throws CompilerException, IOException {
+
         // Local variables
         Lexeme theLexeme;
         StringBuilder lexemeValue;
-        String lexeme;
+        String lexemeText;
         Symbol theSymbol;
         boolean hasAcquiredSymbol;
         char normalizedChar;
@@ -287,6 +287,7 @@ public class LexicalAnalyzer {
                     _currentState = State.COMMENT;
                 }
 
+                // Read in the next character from the file stream
                 readNextCharacter();
             }
             // Handle the IN_STRING state, consume all
@@ -303,6 +304,7 @@ public class LexicalAnalyzer {
                     _currentState = State.STRING_CONST;
                 }
 
+                // Read in the next character from the file stream
                 readNextCharacter();
             }
             // Check if there is a next state, if not, we've hit a dead end
@@ -322,64 +324,65 @@ public class LexicalAnalyzer {
                 // Add the character to the lexeme
                 lexemeValue.append(Character.toString(_currentChar));
 
+                // Read in the next character from the file stream
                 readNextCharacter();
             }
             // State is an accepting state, formulate the new lexeme
             else if (_currentState.isAccepting()) {
 
                 // Get the current value of the lexeme
-                lexeme = lexemeValue.toString();
+                lexemeText = lexemeValue.toString();
 
-                // If the symbol was not in the symbol table, it is an
-                // identifier and should be populated into the table
-                if (!getKeywordTable().containsKey(lexeme)) {
+                // If the symbol was not in the reserved keyword table, it
+                // is an identifier
+                if (!getKeywordTable().containsKey(lexemeText)) {
 
                     // If we're in the SYMBOL state, this must have been
                     // an unknown symbol, so we can infer it to be a
                     // new identifier
                     if (_currentState == State.SYMBOL) {
                         theLexeme = new Lexeme(
-                            lexeme,
+                            lexemeText,
                             TerminalToken.IDENTIFIER,
                             getLineNumber(),
-                            getCharacterNumber() - lexeme.length()
+                            getCharacterNumber() - lexemeText.length()
                         );
                     }
                     // It's whitespace if we were in the WHITESPACE state
                     else if (_currentState == State.WHITESPACE) {
                         theLexeme = new Lexeme(
-                            lexeme,
+                            lexemeText,
                             TerminalToken.WHITESPACE,
                             getLineNumber(),
-                            getCharacterNumber() - lexeme.length()
+                            getCharacterNumber() - lexemeText.length()
                         );
                     }
                     // It's a comment if we were in the COMMENT state
                     else if (_currentState == State.COMMENT) {
                         theLexeme = new Lexeme(
-                            lexeme,
+                            lexemeText,
                             TerminalToken.COMMENT,
                             getLineNumber(),
-                            getCharacterNumber() - lexeme.length()
+                            getCharacterNumber() - lexemeText.length()
                         );
                     }
                     // It's a STRING_CONST if we were in the STRING_CONST
                     // state
                     else if (_currentState == State.STRING_CONST) {
                         theLexeme = new Lexeme(
-                            lexeme,
+                            lexemeText,
                             TerminalToken.STRING_CONST,
                             getLineNumber(),
-                            getCharacterNumber() - lexeme.length()
+                            getCharacterNumber() - lexemeText.length()
                         );
                     }
                     // It's a NUMBER if we were in the NUMBER state
                     else if (_currentState == State.NUMBER) {
                         theLexeme = new Lexeme(
-                            lexeme,
+                            lexemeText,
                             TerminalToken.NUMBER,
                             getLineNumber(),
-                            getCharacterNumber() - lexeme.length()
+                            getCharacterNumber() - lexemeText.length()
                         );
                     }
 
@@ -388,12 +391,14 @@ public class LexicalAnalyzer {
 
                     // Add to symbol table if this is a SYMBOL
                     if (_currentState == State.SYMBOL) {
-                        getSymbolTable().putIfAbsent(lexeme, theSymbol);
+                        getSymbolTable().putIfAbsent(lexemeText, theSymbol);
                     }
-                } else {
+                }
+                // Lexeme is a reserved keyword, output accordingly
+                else {
                     theLexeme = new Lexeme(
-                        lexeme,
-                        getKeywordTable().get(lexeme)
+                        lexemeText,
+                        getKeywordTable().get(lexemeText)
                     );
                 }
 
@@ -430,6 +435,7 @@ public class LexicalAnalyzer {
                 // Exit the loop
                 hasAcquiredSymbol = true;
 
+                // Read in the next character from the file stream
                 readNextCharacter();
             } else {
 
@@ -446,22 +452,20 @@ public class LexicalAnalyzer {
         return theLexeme;
     }
 
+    /**
+     * Read in the next character from the file stream
+     *
+     * @throws IOException if the file read operation failed in some capacity
+     */
     private void readNextCharacter() throws IOException {
+
+        // Read the next character in
         try {
-            // Read the next character in
             _currentChar = _fileReader.read();
-
-            // If we have moved to a new line, reset the
-            // char counter
-            if (_fileReader.getLineNumber() != _lineNumber) {
-                _lineNumber = _fileReader.getLineNumber();
-                _charNumber = 0;
-            }
-
-            // Increment the character counter
-            _charNumber++;
         }
-        // If there is an issue reading, throw an exception
+        // If there is an issue reading, catch and rethrow the exception
+        // with a custom error message indicating which line and character
+        // failed
         catch (IOException e) {
             throw new IOException(
                 String.format(
@@ -472,6 +476,17 @@ public class LexicalAnalyzer {
                 )
             );
         }
+
+        // If we have moved to a new line, reset the
+        // char counter to zero
+        if (_fileReader.getLineNumber() != _lineNumber) {
+            _lineNumber = _fileReader.getLineNumber();
+            _charNumber = 0;
+        }
+
+        // Increment the character counter. If a new line occurred,
+        // the counter is at one, the first character on the line
+        _charNumber++;
     }
 
     /**
@@ -480,7 +495,7 @@ public class LexicalAnalyzer {
      * @return the symbol table
      */
     private HashMap<String, TerminalToken> getKeywordTable() {
-        return _keywordTable;
+        return _reservedWords;
     }
 
     /**

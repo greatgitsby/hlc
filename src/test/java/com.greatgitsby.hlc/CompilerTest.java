@@ -41,8 +41,10 @@ public class CompilerTest {
 
         FileWriter f1 =
             new FileWriter(
-                "./src/test/output/programs/YYY_" + filename.replace(".h", ".s")
+//                "./src/test/output/programs/Y_" + filename.replace(".h", ".s")
+                resolveGoodCompilerFile("./out/" + filename.replace(".h", ".s"))
             );
+
 
         f1.write(p.dumpOutput());
 

@@ -13,6 +13,13 @@ import java.util.*;
  */
 public class Parser {
 
+    // Emitted label prefixes and format names, can alter if needed
+    public static final String BEGIN_LABEL_PREFIX  = "begin_";
+    public static final String END_LABEL_PREFIX    = "end_";
+    public static final String STRING_CONST_PREFIX = "str_";
+    public static final String STRING_FORMAT_NAME  = "sfmt";
+    public static final String INTEGER_FORMAT_NAME = "ifmt";
+
     // 4 is the min, r0-r3 can be augmented by function calls
     // as per ARM convention
     private static final int FIRST_REGISTER_LOC = 4;
@@ -25,13 +32,6 @@ public class Parser {
 
     // The local offset for variables
     public static final int LOCAL_VAR_OFFSET = -4;
-
-    // Emitted label prefixes and format names, can alter if needed
-    public static final String BEGIN_LABEL_PREFIX  = "begin_";
-    public static final String END_LABEL_PREFIX    = "end_";
-    public static final String STRING_CONST_PREFIX = "str_";
-    public static final String STRING_FORMAT_NAME  = "sfmt";
-    public static final String INTEGER_FORMAT_NAME = "ifmt";
 
     // Parser immutable internal state
     private final LexicalAnalyzer                     _lexicalAnalyzer;
@@ -51,32 +51,33 @@ public class Parser {
     private int    _numLabels;
 
     /**
-     * Construct a new Parser
+     * Construct a new Parser and begin parsing the Lexer output
      */
     public Parser(LexicalAnalyzer lexer) throws CompilerException, IOException {
 
         // Initialize lexer in Parser
-        _lexicalAnalyzer = lexer;
-        _currentLexeme = null;
+        _lexicalAnalyzer     = lexer;
+        _currentLexeme       = null;
         _currentParserSymbol = null;
-        _numVars = 0;
-        _numLabels = 0;
+        _numVars             = 0;
+        _numLabels           = 0;
 
         // Construct the parse table
-        _parseTable = buildParseTable();
+        _parseTable      = buildParseTable();
         _stringConstants = new HashMap<>();
 
         // Assembly code aggregator
         _asmCode = new StringBuilder();
 
         // Initialize data structures
-        _labelStack = new ArrayDeque<>();
-        _operandStack = new ArrayDeque<>();
+        _labelStack    = new ArrayDeque<>();
+        _operandStack  = new ArrayDeque<>();
         _operatorStack = new ArrayDeque<>();
-        _parseStack = new ArrayDeque<>();
+        _parseStack    = new ArrayDeque<>();
 
-        // Create the register array
-        _registers = new Symbol[LAST_REGISTER_LOC - FIRST_REGISTER_LOC];
+        // Create the register array with size indicated by the range
+        // between the first and last register locations
+        _registers = new Symbol[ LAST_REGISTER_LOC - FIRST_REGISTER_LOC ];
 
         // Put the integer format into the constant pool
         _stringConstants.put("\"%d\"", new Symbol(
@@ -96,35 +97,6 @@ public class Parser {
 
         // Begin parsing the output of the Lexical Analyzer
         parse();
-    }
-
-    private void parse() throws CompilerException, IOException {
-        // Push the epilogue action onto the parse stack
-        getParseStack().push(Action.EPILOGUE);
-
-        // Push the end symbol ($) onto the parse stack
-        getParseStack().push(TerminalToken.END_OF_INPUT);
-
-        // Push the entry point into the grammar, in this case the
-        // STATEMENT non-terminal, onto the parse stack
-        getParseStack().push(NonTerminalToken.STATEMENT);
-
-        // Push the prologue action onto the parse stack
-        getParseStack().push(Action.PROLOGUE);
-
-        // Get the first symbol from the lexical analyzer
-        setCurrentLexerSymbol(getLexicalAnalyzer().nextSymbol());
-
-        // Process symbols on the parse stack until the stack is empty
-        while (!getParseStack().isEmpty()) {
-            // Get the top of parse stack
-            setTopOfParseStack(getParseStack().peek());
-
-            // Tell the symbol on the top of the parse stack to
-            // do its thing. If it does not succeed, it is due to a syntax
-            // error
-            getTopOfParseStack().doTheThing(this);
-        }
     }
 
     /**
@@ -245,71 +217,12 @@ public class Parser {
     }
 
     /**
-     * Load a symbol into a register. Emits the proper ARM instructions based
-     * on the type of the symbol
+     * Allocates and returns a register number for the provided
+     * symbol. Returns the register if it has already been
+     * allocated
      *
-     * @param theSymbol the symbol to load
-     * @throws CompilerException if the variable was not defined
-     */
-    private void loadSymbolIntoRegister(Symbol theSymbol)
-        throws CompilerException
-    {
-
-        // Symbol is a number or string const
-        if (
-            theSymbol
-                .getLexeme()
-                .getTokenType()
-                .equals(TerminalToken.NUMBER) ||
-                theSymbol
-                    .getLexeme()
-                    .getTokenType()
-                    .equals(TerminalToken.STRING_CONST)
-        ) {
-            // Emit the load instruction for string
-            // labels or immediate values (numbers)
-            emitToOutput(
-                String.format(
-                    "\tldr r%d, =%s\n",
-                    theSymbol.getRegister(),
-                    theSymbol.getLexeme().getValue()
-                )
-            );
-        }
-        // Symbol has been declared
-        else if (
-            theSymbol.getVariableNumber() != NOT_ALLOCATED
-        ) {
-            // Emit the load instruction for a local variable,
-            // obtaining the offset from the symbol
-            emitToOutput(
-                String.format(
-                    "\tldr r%d, [fp, #%d]\n",
-
-                    theSymbol.getRegister(),
-                    LOCAL_VAR_OFFSET *
-                        theSymbol.getVariableNumber()
-                )
-            );
-        }
-        // Symbol is not defined, must throw exception
-        else {
-            throw new VariableNotDefinedException(
-                String.format(
-                    "Line %d Char %d - " +
-                    "Variable %s is not defined",
-
-                    getLexicalAnalyzer().getLineNumber(),
-                    getLexicalAnalyzer().getCharacterNumber(),
-                    theSymbol.getLexeme().getValue()
-                )
-            );
-        }
-    }
-
-    /**
-     * TODO Description
-     *
+     * @param  theSymbol the symbol to allocate a register for
+     * @throws CompilerException if a register could not be allocated
      * @return the register, -1 if it could not provision
      */
     public int getRegister(Symbol theSymbol) throws CompilerException {
@@ -319,9 +232,11 @@ public class Parser {
         // If the register is not already allocated, attempt to find
         // a location for it
         if (register == NOT_ALLOCATED) {
+
+            // Iterate over all registers until a free register is found
             for (int i = 0; i < _registers.length && !foundFree; i++) {
 
-                // Indicates this register is not currently occupied
+                // A free register was found
                 if (_registers[i] == null) {
                     foundFree = true;
 
@@ -337,7 +252,7 @@ public class Parser {
                     // Load the symbol into memory if it is not anonymous
                     // (it contains a lexeme)
                     if (theSymbol.getLexeme() != null) {
-                        loadSymbolIntoRegister(theSymbol);
+                        loadIntoRegister(theSymbol);
                     }
                 }
             }
@@ -377,7 +292,8 @@ public class Parser {
     public void clearRegisters() {
 
         // Deallocate every symbol from its position in the
-        // register bank
+        // register bank and update the symbol's internal
+        // state
         for (Symbol theSymbol : _registers) {
             if (theSymbol != null) {
                 theSymbol.setRegister(NOT_ALLOCATED);
@@ -414,6 +330,110 @@ public class Parser {
      */
     public void emitToOutput(String line) {
         getOutput().append(line);
+    }
+
+    /**
+     * Begin parsing the incremental output of the Lexical Analyzer
+     *
+     * @throws CompilerException if any compile error occurred
+     * @throws IOException if an error reading the file occurred
+     */
+    private void parse() throws CompilerException, IOException {
+
+        // Push the epilogue action onto the parse stack
+        getParseStack().push(Action.EPILOGUE);
+
+        // Push the end symbol ($) onto the parse stack
+        getParseStack().push(TerminalToken.END_OF_INPUT);
+
+        // Push the entry point into the grammar, in this case the
+        // STATEMENT non-terminal, onto the parse stack
+        getParseStack().push(NonTerminalToken.STATEMENT);
+
+        // Push the prologue action onto the parse stack
+        getParseStack().push(Action.PROLOGUE);
+
+        // Get the first symbol from the lexical analyzer
+        setCurrentLexerSymbol(getLexicalAnalyzer().nextSymbol());
+
+        // Process symbols on the parse stack until the stack is empty
+        while (!getParseStack().isEmpty()) {
+            // Get the top of parse stack
+            setTopOfParseStack(getParseStack().peek());
+
+            // Tell the symbol on the top of the parse stack to
+            // do its thing. If it does not succeed, it is due to a syntax
+            // error
+            getTopOfParseStack().doTheThing(this);
+        }
+    }
+
+    /**
+     * Load a symbol into a register. Emits the proper ARM instructions based
+     * on the type of the symbol
+     *
+     * @param theSymbol the symbol to load
+     * @throws CompilerException if the variable was not defined
+     */
+    private void loadIntoRegister(Symbol theSymbol) throws CompilerException {
+
+        // Variables
+        Token theSymbolToken;
+
+        // Get the token type of the Symbol's Lexeme
+        theSymbolToken = theSymbol.getLexeme().getTokenType();
+
+        // Symbol is a number or string const
+        if (
+            theSymbolToken.equals(TerminalToken.NUMBER) ||
+            theSymbolToken.equals(TerminalToken.STRING_CONST)
+        ) {
+
+            // Emit the load instruction for string
+            // labels or immediate values (numbers)
+            emitToOutput(
+                String.format(
+                    """
+                    \tldr r%d, =%s
+                    """,
+
+                    theSymbol.getRegister(),
+                    theSymbol.getLexeme().getValue()
+                )
+            );
+        }
+        // Symbol has been declared
+        else if (theSymbol.getVariableNumber() != NOT_ALLOCATED) {
+
+            // Emit the load instruction for a local variable,
+            // obtaining the offset from the symbol
+            emitToOutput(
+                String.format(
+                    """
+                    \tldr r%d, [fp, #%d]
+                    """,
+
+                    theSymbol.getRegister(),
+
+                    // Variable location is the local variable offset times
+                    // the current variable's number
+                    LOCAL_VAR_OFFSET * theSymbol.getVariableNumber()
+                )
+            );
+        }
+        // Symbol is not defined, must throw exception
+        else {
+            throw new VariableNotDefinedException(
+                String.format(
+                    "Line %d Char %d - " +
+                        "Variable %s is not defined",
+
+                    getLexicalAnalyzer().getLineNumber(),
+                    getLexicalAnalyzer().getCharacterNumber(),
+                    theSymbol.getLexeme().getValue()
+                )
+            );
+        }
     }
 
     /**

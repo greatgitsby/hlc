@@ -20,11 +20,12 @@ public class LexicalAnalyzer {
 
     // Static variables
     private static final char CARRIAGE_RETURN  = '\r';
+    private static final char DIGIT            = '0';
+    private static final int  EMPTY_BUF        = 65535;
     private static final char END_COMMENT      = '}';
     private static final char END_STRING_CONST = '"';
     private static final int  EOF              = -1;
-    private static final int  EMPTY_BUF        = 65535;
-    private static final char DIGIT            = '0';
+    private static final char ESCAPE_CHAR      = '\\';
     private static final char LETTER           = 'a';
     private static final char NEWLINE          = '\n';
     private static final char TAB              = '\t';
@@ -42,6 +43,7 @@ public class LexicalAnalyzer {
     private int     _lineNumber;
     private boolean _hasNextLexeme;
     private int     _currentChar;
+    private int     _prevChar;
 
     /**
      * Constructs a new Lexical Analyzer, parsing an input file
@@ -85,7 +87,7 @@ public class LexicalAnalyzer {
         _filename = theFile.getName().replaceFirst("[.][^.]+$", "");
 
         // Read in the first character from the file reader
-        _currentChar = _fileReader.read();
+        readNextCharacter();
 
         // Insert all of our reserved keywords as Tokens
         _reservedWords = new HashMap<>() {{
@@ -295,13 +297,25 @@ public class LexicalAnalyzer {
             // signals the end of a string
             else if (_currentState == State.IN_STRING) {
 
-                // Add the incoming character to the lexeme
-                lexemeValue.append(Character.toString(_currentChar));
+                // Add the incoming character to the lexeme.
+                // Add escape character manually since it cannot
+                // be put through the toString method
+                if (_currentChar == ESCAPE_CHAR) {
+                    lexemeValue.append(ESCAPE_CHAR);
+                } else {
+                    lexemeValue.append(Character.toString(_currentChar));
+                }
 
                 // If we have hit the END_STRING_CONST character,
                 // it is time to move to the STRING_CONST state
                 if (normalizedChar == END_STRING_CONST) {
-                    _currentState = State.STRING_CONST;
+                    if (_prevChar != ESCAPE_CHAR) {
+                        _currentState = State.STRING_CONST;
+                    } else {
+                        _currentState = State.IN_STRING;
+                    }
+                } else if (_currentChar == ESCAPE_CHAR) {
+                    _currentState = State.IN_STRING;
                 }
 
                 // Read in the next character from the file stream
@@ -461,6 +475,7 @@ public class LexicalAnalyzer {
 
         // Read the next character in
         try {
+            _prevChar = _currentChar;
             _currentChar = _fileReader.read();
         }
         // If there is an issue reading, catch and rethrow the exception

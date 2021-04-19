@@ -5,7 +5,7 @@ import java.util.*;
 /**
  * NonTerminalToken
  *
- * Represents the set of non-terminal tokens in the HansenLite language.
+ * Represents the set of non-terminal tokens in the HansenLite language
  */
 public enum NonTerminalToken implements Token {
     ADDITION,

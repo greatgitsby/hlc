@@ -16,19 +16,6 @@ public class Lexeme {
     private final int    _beginningCharNumber;
 
     /**
-     * Constructs a new Lexeme
-     *
-     * @param value the value from the file
-     * @param tokenType the type of Lexeme this is
-     */
-    public Lexeme(String value, Token tokenType) {
-        _value               = value;
-        _tokenType           = tokenType;
-        _lineNumber          = 0;
-        _beginningCharNumber = 0;
-    }
-
-    /**
      * Constructs a new Lexeme with beginning char and line numbers
      *
      * @param value the value from the file
@@ -41,6 +28,17 @@ public class Lexeme {
         _tokenType           = tokenType;
         _lineNumber          = lineNum;
         _beginningCharNumber = charNum;
+    }
+
+    /**
+     * Constructs a new Lexeme. Initialize line and beginning character
+     * numbers as 0
+     *
+     * @param value the value from the file
+     * @param tokenType the type of Lexeme this is
+     */
+    public Lexeme(String value, Token tokenType) {
+        this(value, tokenType, 0, 0);
     }
 
     /**

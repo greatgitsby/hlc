@@ -27,7 +27,7 @@ public class Symbol {
     }
 
     /**
-     * No-arg Symbol constructor (used for anonymous Symbols)
+     * No-arg Symbol constructor used for anonymous Symbols
      */
     public Symbol() {
         this(null);

@@ -287,6 +287,7 @@ public class LexicalAnalyzer {
                     _currentState = State.COMMENT;
                 }
 
+                // Read in the next character from the file stream
                 readNextCharacter();
             }
             // Handle the IN_STRING state, consume all
@@ -303,6 +304,7 @@ public class LexicalAnalyzer {
                     _currentState = State.STRING_CONST;
                 }
 
+                // Read in the next character from the file stream
                 readNextCharacter();
             }
             // Check if there is a next state, if not, we've hit a dead end
@@ -322,6 +324,7 @@ public class LexicalAnalyzer {
                 // Add the character to the lexeme
                 lexemeValue.append(Character.toString(_currentChar));
 
+                // Read in the next character from the file stream
                 readNextCharacter();
             }
             // State is an accepting state, formulate the new lexeme
@@ -330,8 +333,8 @@ public class LexicalAnalyzer {
                 // Get the current value of the lexeme
                 lexemeText = lexemeValue.toString();
 
-                // If the symbol was not in the symbol table, it is an
-                // identifier and should be populated into the table
+                // If the symbol was not in the reserved keyword table, it
+                // is an identifier
                 if (!getKeywordTable().containsKey(lexemeText)) {
 
                     // If we're in the SYMBOL state, this must have been
@@ -390,7 +393,9 @@ public class LexicalAnalyzer {
                     if (_currentState == State.SYMBOL) {
                         getSymbolTable().putIfAbsent(lexemeText, theSymbol);
                     }
-                } else {
+                }
+                // Lexeme is a reserved keyword, output accordingly
+                else {
                     theLexeme = new Lexeme(
                         lexemeText,
                         getKeywordTable().get(lexemeText)
@@ -430,6 +435,7 @@ public class LexicalAnalyzer {
                 // Exit the loop
                 hasAcquiredSymbol = true;
 
+                // Read in the next character from the file stream
                 readNextCharacter();
             } else {
 
@@ -446,22 +452,20 @@ public class LexicalAnalyzer {
         return theLexeme;
     }
 
+    /**
+     * Read in the next character from the file stream
+     *
+     * @throws IOException if the file read operation failed in some capacity
+     */
     private void readNextCharacter() throws IOException {
+
+        // Read the next character in
         try {
-            // Read the next character in
             _currentChar = _fileReader.read();
-
-            // If we have moved to a new line, reset the
-            // char counter
-            if (_fileReader.getLineNumber() != _lineNumber) {
-                _lineNumber = _fileReader.getLineNumber();
-                _charNumber = 0;
-            }
-
-            // Increment the character counter
-            _charNumber++;
         }
-        // If there is an issue reading, throw an exception
+        // If there is an issue reading, catch and rethrow the exception
+        // with a custom error message indicating which line and character
+        // failed
         catch (IOException e) {
             throw new IOException(
                 String.format(
@@ -472,6 +476,17 @@ public class LexicalAnalyzer {
                 )
             );
         }
+
+        // If we have moved to a new line, reset the
+        // char counter to zero
+        if (_fileReader.getLineNumber() != _lineNumber) {
+            _lineNumber = _fileReader.getLineNumber();
+            _charNumber = 0;
+        }
+
+        // Increment the character counter. If a new line occurred,
+        // the counter is at one, the first character on the line
+        _charNumber++;
     }
 
     /**

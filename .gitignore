@@ -30,3 +30,5 @@ gradle/
 gradlew
 gradlew.bat
 build/
+
+./src/test/output/
